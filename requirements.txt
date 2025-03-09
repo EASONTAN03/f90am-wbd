@@ -11,3 +11,27 @@ dependencies:
   - seaborn
   - ipykernel
   - wbdata
+
+  - scikit-learn
+  - pytorch
+  - torchvision
+  - torchaudio
+  - tensorflow
+  - keras
+  - jupyter
+  - jupyterlab
+  - transformers
+  - datasets
+  - umap-learn
+  - hdbscan
+  - tslearn
+  - tqdm
+  - plotly
+  - graphviz
+  - pydot
+  - t-sne
+  - wbdata
+  - requests
+  - beautifulsoup4
+  - pip:
+      - torchtext
