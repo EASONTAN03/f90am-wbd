@@ -18,7 +18,7 @@ import csv
 import time
 import ast
 
-df=pd.read_csv('../data/sequences_world_bank_data_dev.csv')
+df=pd.read_csv('data/task2_world_bank_data_dev.csv')
 
 # Check for CUDA
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")

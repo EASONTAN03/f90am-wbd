@@ -7,7 +7,7 @@ import pandas as pd
 from pmdarima import auto_arima
 from tqdm import tqdm  # Progress bar
 
-data_path = r"world_bank_data_dev.csv"
+data_path = r"data/world_bank_data_dev.csv"
 df = pd.read_csv(data_path)
 df["date"] = pd.to_datetime(df["date"]).dt.year
 
@@ -283,4 +283,4 @@ pd.set_option('display.max_colwidth', None)  # Display full content of each colu
 print(sequences_df.head(5))
 
 # Save to CSV
-sequences_df.to_csv(f'data/sequences_world_bank_data_dev.csv', index=False)
+sequences_df.to_csv(f'data/task2_world_bank_data_dev.csv', index=False)

@@ -1,0 +1,4 @@
+model_path,params,mse,mae,mape
+results/task4\models\1741748824\LSTM.pth,"{'batch_size': 16, 'epochs': 50, 'learning_rate': 0.001}",48284136.0,3763.83349609375,15.056592226028442
+results/task4\models\1741748824\CNN-LSTM.pth,"{'batch_size': 16, 'epochs': 50, 'learning_rate': 0.001}",39277148.0,3397.643798828125,16.82148277759552
+results/task4\models\1741748824\Transformer.pth,"{'batch_size': 16, 'epochs': 50, 'learning_rate': 0.001}",47397216.0,3732.957763671875,15.983286499977112
