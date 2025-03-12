@@ -151,8 +151,6 @@ def train_model(input_shape, train_loader, val_loader, batch_size, num_epochs, l
             print("Early stopping")
             break
     
-    params = {'batch_size': batch_size, 'epochs': num_epochs, 'learning_rate': lr}
-
     # Store training history for plotting
     history={
         'batch_size': batch_size, 'epochs': num_epochs, 'lr': lr, 
@@ -160,7 +158,7 @@ def train_model(input_shape, train_loader, val_loader, batch_size, num_epochs, l
         'train_accuracies': train_accuracies, 'test_accuracies': val_accuracies
     }
 
-    return model, params, history  # Return history for plotting
+    return model, history  # Return history for plotting
 
 def train_model_cv(X, y, batch_sizes, epochs_list, learning_rates, class_weights, k_folds=5):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -288,10 +286,10 @@ def train_model_cv(X, y, batch_sizes, epochs_list, learning_rates, class_weights
     test_dataset = TensorDataset(test_X_tensor, test_y_tensor)
     test_loader= DataLoader(test_dataset, batch_size=best_params['batch_size'], shuffle=True)
 
-    model,params,history = train_model(input_shape=train_X_tensor.shape[1], train_loader=train_loader, val_loader=test_loader, batch_size=best_params['batch_size'], num_epochs=best_params['epochs'], lr=best_params['learning_rate'], class_weights=class_weights)
+    model, history = train_model(input_shape=train_X_tensor.shape[1], train_loader=train_loader, val_loader=test_loader, batch_size=best_params['batch_size'], num_epochs=best_params['epochs'], lr=best_params['learning_rate'], class_weights=class_weights)
     results=evaluate(model, test_dataset, best_params['batch_size'], le)
 
-    return model, params, history, results  # Return history for plotting
+    return model, str(best_params), history, results  # Return history for plotting
 
 
 def save_training_history(history, file_path, output_dir, test_accuracy=None):
@@ -381,46 +379,45 @@ def evaluate(model, test_dataset, batch_size, le):
 
     return [tp.tolist(), fp.tolist(), tn.tolist(), fn.tolist(), accuracy, precision, recall, f1_score]
 
-if __name__ == "__main__":
-    # Set seed for reproducibility
-    torch.manual_seed(11)
-    np.random.seed(11)
+# Set seed for reproducibility
+torch.manual_seed(11)
+np.random.seed(11)
 
-    timestamp = int(time.time())
-    result_dir = "results/task3"
-    os.makedirs(result_dir, exist_ok=True)
+timestamp = int(time.time())
+result_dir = "results/task3"
+os.makedirs(result_dir, exist_ok=True)
 
-    df_task3 = normalised_imputed_df.copy()
-    X, y, le, class_weights = load_and_preprocess_data(df_task3)
+df_task3 = normalised_imputed_df.copy()
+X, y, le, class_weights = load_and_preprocess_data(df_task3)
 
-    params = {
-        'batch_sizes': [16, 32, 64],  
-        'epochs_list': [70],  
-        'learning_rates': [0.001, 0.01, 0.1] 
-    }
+params = {
+    'batch_sizes': [16, 32, 64],  
+    'epochs_list': [70],  
+    'learning_rates': [0.001, 0.01, 0.1] 
+}
 
-    model, params, history, results = train_model_cv(X, y, params['batch_sizes'], params['epochs_list'], params['learning_rates'], class_weights)
-    save_training_history(history, file_path=str(timestamp), output_dir=result_dir, test_accuracy=results[4])
+model, params, history, results = train_model_cv(X, y, params['batch_sizes'], params['epochs_list'], params['learning_rates'], class_weights)
+save_training_history(history, file_path=str(timestamp), output_dir=result_dir, test_accuracy=results[4])
 
-    model_dir=f"{result_dir}/model"
-    os.makedirs(model_dir, exist_ok=True)
-    model_path = f"{model_dir}/{timestamp}.pth"
-    torch.save(model.state_dict(), model_path)
+model_dir=f"{result_dir}/models"
+os.makedirs(model_dir, exist_ok=True)
+model_path = f"{model_dir}/{timestamp}.pth"
+torch.save(model.state_dict(), model_path)
 
-    # Save results
-    os.makedirs(result_dir, exist_ok=True)
-    result_path = f"{result_dir}/results.csv"
-    file_exists = os.path.isfile(result_path)
-    header = ["model_path", "model", "tp", "fp", "tn", "fn", "accuracy", "precision", "recall", "f1-score"]
+# Save results
+os.makedirs(result_dir, exist_ok=True)
+result_path = f"{result_dir}/results.csv"
+file_exists = os.path.isfile(result_path)
+header = ["model_path", "params", "tp", "fp", "tn", "fn", "accuracy", "precision", "recall", "f1-score"]
 
-    results=[model_path] + results
+results=[model_path, params] + results
 
-    print(results)
-    with open(result_path, mode='a', newline='') as file:
-        writer = csv.writer(file)
-        # Write header if the file does not exist
-        if not file_exists:
-            writer.writerow(header)
-        # Write the statistics
-        writer.writerow(results)
+print(results)
+with open(result_path, mode='a', newline='') as file:
+    writer = csv.writer(file)
+    # Write header if the file does not exist
+    if not file_exists:
+        writer.writerow(header)
+    # Write the statistics
+    writer.writerow(results)
 
