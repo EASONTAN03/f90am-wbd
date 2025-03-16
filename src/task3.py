@@ -13,7 +13,7 @@ from itertools import product
 import time
 import csv
 
-normalised_imputed_df=pd.read_csv('data/normalised_imputed_world_bank_data_dev.csv')
+normalised_imputed_df=pd.read_csv('data/final_impute_world_bank_data_dev.csv')
 
 torch.manual_seed(11)
 np.random.seed(11)
@@ -64,6 +64,14 @@ class GDPClassifier(nn.Module):
 
 # Load and preprocess data
 def load_and_preprocess_data(df):
+    log_transform_indicators = [
+        "GDPpc_2017$", "Population_total", "Energy_use", "Exports_2017$"
+    ]
+
+    for indicator in log_transform_indicators:
+        df[indicator] = np.log1p(df[indicator])  # log1p to avoid log(0) issues
+
+
     avg_gdp = df.groupby('country')['GDPpc_2017$'].mean().reset_index()
     avg_gdp['GDP_class'] = pd.qcut(avg_gdp['GDPpc_2017$'], q=4, 
                                   labels=["Under-developed", "Developing", "Emerging", "Developed"])
