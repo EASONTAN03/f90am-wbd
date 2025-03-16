@@ -164,7 +164,7 @@ def cluster_countries(latent_data, result_dir, timestamp, n_clusters=4):
     clusters = kmeans.fit_predict(latent_data)
 
     # Save the trained KMeans model
-    cluster_model_path = f"{result_dir}/model/clusters_{timestamp}.pkl"
+    cluster_model_path = f"{result_dir}/models/clusters_{timestamp}.pkl"
     joblib.dump(kmeans, cluster_model_path)
     print(f"KMeans clustering model saved at {cluster_model_path}")
 
@@ -290,7 +290,7 @@ if __name__ == "__main__":
     plt.close()
     print(f"Training history plot saved at: {plot_path}")
 
-    model_dir=f"{result_dir}/model"
+    model_dir=f"{result_dir}/models"
     os.makedirs(model_dir, exist_ok=True)
     model_path = f"{model_dir}/autoencoder_{timestamp}.pth"
     torch.save(trained_autoencoder.state_dict(), model_path)
