@@ -1,2 +1,2 @@
 model_path,Silhouette Score,Davies-Bouldin Index,Calinski-Harabasz Index,WCSS
-results/task2/models/clusters_1742105020.pkl,0.5140848,0.567672467209189,569.302276010268,101451.5
+results/task2/models/clusters_1742186873.pkl,0.8957932,0.331709718074523,1113.922044819272,35.04713821411133

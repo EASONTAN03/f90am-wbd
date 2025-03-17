@@ -12,8 +12,9 @@ from sklearn.metrics import confusion_matrix, classification_report, f1_score
 from itertools import product
 import time
 import csv
+import seaborn as sns
 
-normalised_imputed_df=pd.read_csv('data/final_impute_world_bank_data_dev.csv')
+imputed_df=pd.read_csv('data/final_impute_world_bank_data_dev.csv')
 
 torch.manual_seed(11)
 np.random.seed(11)
@@ -328,10 +329,6 @@ def save_training_history(history, file_path, output_dir, test_accuracy=None):
     plt.plot(epochs, history["train_accuracies"], label='Train Accuracy')
     plt.plot(epochs, history["test_accuracies"], label='Validation Accuracy')
 
-    # Plot test accuracy as a horizontal dashed line
-    if test_accuracy is not None:
-        plt.axhline(y=test_accuracy, color='r', linestyle='dashed', label='Test Accuracy')
-
     plt.title('Training and Validation Accuracy')
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
@@ -370,6 +367,17 @@ def evaluate(model, test_dataset, batch_size, le):
 
     # Compute confusion matrix and metrics
     cm = confusion_matrix(y_true, y_pred)
+    plt.figure(figsize=(6,6))
+    sns.heatmap(cm, annot=True, fmt='d', cmap="Blues", xticklabels=le.classes_, yticklabels=le.classes_)
+    plt.xlabel("Predicted")
+    plt.ylabel("True")
+    plt.title("Confusion Matrix")
+    plt.show()
+
+    tp = np.diag(cm)
+    fp = cm.sum(axis=0) - tp
+    fn = cm.sum(axis=1) - tp
+    tn = cm.sum() - (fp + tp + fn)
     tp = np.diag(cm)
     fp = cm.sum(axis=0) - tp
     fn = cm.sum(axis=1) - tp
@@ -395,7 +403,7 @@ timestamp = int(time.time())
 result_dir = "results/task3"
 os.makedirs(result_dir, exist_ok=True)
 
-df_task3 = normalised_imputed_df.copy()
+df_task3 = imputed_df.copy()
 X, y, le, class_weights = load_and_preprocess_data(df_task3)
 
 params = {

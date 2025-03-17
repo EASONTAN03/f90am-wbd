@@ -81,27 +81,69 @@ class EarlyStopping():
             if self.counter >= self.patience:
                 self.early_stop = True
 
-# Define the Autoencoder model
 class Autoencoder(nn.Module):
     def __init__(self, input_dim, latent_dim):
         super(Autoencoder, self).__init__()
+        
+        # Encoder with BatchNorm and LeakyReLU
         self.encoder = nn.Sequential(
-            nn.Linear(input_dim, 128),
-            nn.ReLU(),
+            nn.Linear(input_dim, 256),
+            nn.BatchNorm1d(256),
+            nn.LeakyReLU(0.2),  # Avoids dead neurons
+            nn.Linear(256, 128),
+            nn.BatchNorm1d(128),
+            nn.LeakyReLU(0.2),
             nn.Linear(128, latent_dim),
-            nn.ReLU()
+            nn.Tanh()  # Better for latent representations
         )
+
+        # Decoder with BatchNorm and LeakyReLU
         self.decoder = nn.Sequential(
             nn.Linear(latent_dim, 128),
-            nn.ReLU(),
-            nn.Linear(128, input_dim),
-            nn.Sigmoid()
+            nn.BatchNorm1d(128),
+            nn.LeakyReLU(0.2),
+            nn.Linear(128, 256),
+            nn.BatchNorm1d(256),
+            nn.LeakyReLU(0.2),
+            nn.Linear(256, input_dim),
+            nn.Sigmoid()  # Outputs in range [0,1]
         )
-    
+
+        # Apply Xavier Initialization
+        self.apply(self.init_weights)
+
     def forward(self, x):
         latent = self.encoder(x)
         reconstructed = self.decoder(latent)
         return latent, reconstructed
+
+    def init_weights(self, m):
+        if isinstance(m, nn.Linear):
+            nn.init.xavier_uniform_(m.weight)
+            if m.bias is not None:
+                nn.init.zeros_(m.bias)
+
+# # Define the Autoencoder model
+# class Autoencoder(nn.Module):
+#     def __init__(self, input_dim, latent_dim):
+#         super(Autoencoder, self).__init__()
+#         self.encoder = nn.Sequential(
+#             nn.Linear(input_dim, 128),
+#             nn.ReLU(),
+#             nn.Linear(128, latent_dim),
+#             nn.ReLU()
+#         )
+#         self.decoder = nn.Sequential(
+#             nn.Linear(latent_dim, 128),
+#             nn.ReLU(),
+#             nn.Linear(128, input_dim),
+#             nn.Sigmoid()
+#         )
+    
+#     def forward(self, x):
+#         latent = self.encoder(x)
+#         reconstructed = self.decoder(latent)
+#         return latent, reconstructed
 
 # Training function
 def train_autoencoder(data, batch_sizes, epochs_list, learning_rates):
@@ -112,17 +154,20 @@ def train_autoencoder(data, batch_sizes, epochs_list, learning_rates):
     history = {}  # Store loss and accuracy per epoch
 
     input_dim = data.shape[1]
-    latent_dim = 5
+    latent_dim = 6
 
     for batch_size, num_epochs, lr in product(batch_sizes, epochs_list, learning_rates):
         print(f"Training with batch_size={batch_size}, epochs={num_epochs}, learning_rate={lr}")
         
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
         model = Autoencoder(input_dim, latent_dim).to(device)
-        early_stopping = EarlyStopping(patience=10, min_delta=0.001)
+        early_stopping = EarlyStopping(patience=20, min_delta=0.001)
 
-        criterion = nn.MSELoss()
-        optimizer = optim.Adam(model.parameters(), lr=lr)
+        # criterion = nn.MSELoss()
+        criterion = nn.SmoothL1Loss()
+        optimizer = optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
+        scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.1, patience=5)
+
         train_losses = []
 
         for epoch in range(num_epochs):
@@ -139,6 +184,8 @@ def train_autoencoder(data, batch_sizes, epochs_list, learning_rates):
             train_loss = running_loss / len(train_loader)
             train_losses.append(train_loss)  # Store training loss
             print(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {train_loss:.4f}")
+            
+            scheduler.step(train_loss)
 
             early_stopping(running_loss)
             if early_stopping.early_stop:
@@ -248,9 +295,9 @@ if __name__ == "__main__":
     torch.manual_seed(11)
     np.random.seed(11)
 
-    batch_sizes = [16, 32, 64]
-    epochs_list = [150]
-    learning_rates = [0.001, 0.01, 0.1]
+    batch_sizes = [16, 32]
+    epochs_list = [200]
+    learning_rates = [0.01, 0.1]
 
     timestamp = int(time.time())
     result_dir = "results/task2"
@@ -262,15 +309,10 @@ if __name__ == "__main__":
     data, country_names = preprocess_data(df, countries)
     print(data)
     print(country_names)
-
-    # scaler = MinMaxScaler()
-    # data = scaler.fit_transform(data)
-
     # Train Autoencoder
     # Reduced feature space
     trained_autoencoder, best_params, history = train_autoencoder(data, batch_sizes, epochs_list, learning_rates)
 
-    
     output_dir=f"{result_dir}/training_graphs"
     os.makedirs(output_dir, exist_ok=True)
 
@@ -298,6 +340,29 @@ if __name__ == "__main__":
     # Extract latent representations
     latent_data = trained_autoencoder.encoder(torch.tensor(data, dtype=torch.float32).to(device))
     latent_data = latent_data.cpu().detach().numpy()
+
+    
+    # Compute variance for each latent dimension
+    latent_variance = np.var(latent_data, axis=0)
+
+    # Print variance values
+    print("\nLatent Variance for Each Dimension:")
+    for i, var in enumerate(latent_variance):
+        print(f"Latent Dimension {i+1}: {var:.6f}")
+
+    # Plot variance distribution
+    plt.figure(figsize=(8, 5))
+    sns.barplot(x=np.arange(1, len(latent_variance) + 1), y=latent_variance, palette="viridis")
+    plt.xlabel("Latent Dimension")
+    plt.ylabel("Variance")
+    plt.title("Variance of Latent Representations")
+    plt.xticks(range(1, len(latent_variance) + 1))
+    plt.grid(axis="y", linestyle="--", alpha=0.7)
+
+    # Save plot
+    output_path = f"{result_dir}/latent_variance_{timestamp}.png"
+    plt.savefig(output_path)
+    print(f"Latent variance plot saved at: {output_path}")
 
     # Perform clustering
     clusters = cluster_countries(latent_data, result_dir, timestamp)
