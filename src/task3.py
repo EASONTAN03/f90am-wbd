@@ -296,10 +296,52 @@ def train_model_cv(X, y, batch_sizes, epochs_list, learning_rates, class_weights
     test_loader= DataLoader(test_dataset, batch_size=best_params['batch_size'], shuffle=True)
 
     model, history = train_model(input_shape=train_X_tensor.shape[1], train_loader=train_loader, val_loader=test_loader, batch_size=best_params['batch_size'], num_epochs=best_params['epochs'], lr=best_params['learning_rate'], class_weights=class_weights)
-    results=evaluate(model, test_dataset, best_params['batch_size'], le)
+    cm, results=evaluate(model, test_dataset, best_params['batch_size'], le)
 
-    return model, str(best_params), history, results  # Return history for plotting
+    return model, str(best_params), history, results, cm  # Return history for plotting
 
+def evaluate(model, test_dataset, batch_size, le):
+    
+    model.eval()
+    y_true, y_pred = [], []
+    all_outputs = []    
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
+
+    with torch.no_grad():
+        for inputs, labels in test_loader:
+            inputs, labels = inputs.to(device), labels.to(device)  # Ensure same device
+            outputs = model(inputs)
+            _, predicted = torch.max(outputs, 1)
+            
+            y_true.extend(labels.cpu().numpy())
+            y_pred.extend(predicted.cpu().numpy())
+            all_outputs.extend(outputs.cpu().numpy())
+
+    print(classification_report(y_true, y_pred, target_names=le.classes_))
+
+    # Compute confusion matrix and metrics
+    cm = confusion_matrix(y_true, y_pred)
+
+    tp = np.diag(cm)
+    fp = cm.sum(axis=0) - tp
+    fn = cm.sum(axis=1) - tp
+    tn = cm.sum() - (fp + tp + fn)
+    tp = np.diag(cm)
+    fp = cm.sum(axis=0) - tp
+    fn = cm.sum(axis=1) - tp
+    tn = cm.sum() - (fp + tp + fn)
+
+    # Compute per-class precision, recall, F1-score, and accuracy
+    precision = np.diag(cm) / np.sum(cm, axis=0)  # TP / (TP + FP)
+    recall = np.diag(cm) / np.sum(cm, axis=1)  # TP / (TP + FN)
+    f1_score = 2 * (precision * recall) / (precision + recall + 1e-10)  # Avoid division by zero
+    accuracy = np.sum(np.diag(cm)) / np.sum(cm)  # Overall accuracy
+
+    precision = np.nanmean(precision)  # Mean precision across classes
+    recall = np.nanmean(recall)  # Mean recall across classes
+    f1_score = np.nanmean(f1_score)  # Mean F1-score across classes
+
+    return cm, [tp.tolist(), fp.tolist(), tn.tolist(), fn.tolist(), accuracy, precision, recall, f1_score]
 
 def save_training_history(history, file_path, output_dir, test_accuracy=None):
     output_dir = f"{output_dir}/training_graphs"
@@ -346,54 +388,16 @@ def save_training_history(history, file_path, output_dir, test_accuracy=None):
     
     print(f"Training history saved to {plot_path}")
 
-def evaluate(model, test_dataset, batch_size, le):
-    
-    model.eval()
-    y_true, y_pred = [], []
-    all_outputs = []    
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
-
-    with torch.no_grad():
-        for inputs, labels in test_loader:
-            inputs, labels = inputs.to(device), labels.to(device)  # Ensure same device
-            outputs = model(inputs)
-            _, predicted = torch.max(outputs, 1)
-            
-            y_true.extend(labels.cpu().numpy())
-            y_pred.extend(predicted.cpu().numpy())
-            all_outputs.extend(outputs.cpu().numpy())
-
-    print(classification_report(y_true, y_pred, target_names=le.classes_))
-
-    # Compute confusion matrix and metrics
-    cm = confusion_matrix(y_true, y_pred)
+def save_cm_figure(cm, plot_path):
     plt.figure(figsize=(6,6))
     sns.heatmap(cm, annot=True, fmt='d', cmap="Blues", xticklabels=le.classes_, yticklabels=le.classes_)
     plt.xlabel("Predicted")
     plt.ylabel("True")
     plt.title("Confusion Matrix")
-    plt.show()
+    plt.savefig("results/task3/confusion_matrix.png")
+    plt.close()
+    print(f"Confusion matrix saved to {plot_path}")
 
-    tp = np.diag(cm)
-    fp = cm.sum(axis=0) - tp
-    fn = cm.sum(axis=1) - tp
-    tn = cm.sum() - (fp + tp + fn)
-    tp = np.diag(cm)
-    fp = cm.sum(axis=0) - tp
-    fn = cm.sum(axis=1) - tp
-    tn = cm.sum() - (fp + tp + fn)
-
-    # Compute per-class precision, recall, F1-score, and accuracy
-    precision = np.diag(cm) / np.sum(cm, axis=0)  # TP / (TP + FP)
-    recall = np.diag(cm) / np.sum(cm, axis=1)  # TP / (TP + FN)
-    f1_score = 2 * (precision * recall) / (precision + recall + 1e-10)  # Avoid division by zero
-    accuracy = np.sum(np.diag(cm)) / np.sum(cm)  # Overall accuracy
-
-    precision = np.nanmean(precision)  # Mean precision across classes
-    recall = np.nanmean(recall)  # Mean recall across classes
-    f1_score = np.nanmean(f1_score)  # Mean F1-score across classes
-
-    return [tp.tolist(), fp.tolist(), tn.tolist(), fn.tolist(), accuracy, precision, recall, f1_score]
 
 # Set seed for reproducibility
 torch.manual_seed(11)
@@ -412,8 +416,9 @@ params = {
     'learning_rates': [0.001, 0.01, 0.1] 
 }
 
-model, params, history, results = train_model_cv(X, y, params['batch_sizes'], params['epochs_list'], params['learning_rates'], class_weights)
+model, params, history, results, cm = train_model_cv(X, y, params['batch_sizes'], params['epochs_list'], params['learning_rates'], class_weights)
 save_training_history(history, file_path=str(timestamp), output_dir=result_dir, test_accuracy=results[4])
+save_cm_figure(cm, plot_path=f"{result_dir}/confusion_matrix_{timestamp}.png")
 
 model_dir=f"{result_dir}/models"
 os.makedirs(model_dir, exist_ok=True)
