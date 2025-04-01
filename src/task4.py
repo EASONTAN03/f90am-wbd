@@ -22,9 +22,9 @@ batch_sizes = [16]
 epochs_list = [50]
 
 # dropout_options = [0,0.1,0.2,0.3,0.4,0.5]
-# learning_rates = [0.001]
-# batch_sizes = [8]
-# epochs_list = [30]
+# learning_rates = [0.0001,0.001,0.1]
+# batch_sizes = [8,16,34,64]
+# epochs_list = [10,20,30,40,50]
 
 seed=11
 
@@ -605,5 +605,6 @@ for name in models:
         writer.writerow(results)
 
 selected_countries = ["United States", "China", "Russian Federation", "Brazil"] 
+selected_countries = ["Switzerland", "Denmark"] 
 
 plot_gdp_predictions_multi(actuals, lstm_preds, cnn_lstm_preds, transformer_preds, country_labels, selected_countries, graphs_dir)
