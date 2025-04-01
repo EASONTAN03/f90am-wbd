@@ -1,0 +1,25 @@
+{
+    "model": "CNN-LSTM",
+    "val_loss": 0.02946718393026718,
+    "params": {
+        "dropout": 0,
+        "lr": 0.001,
+        "batch_size": 16,
+        "epochs": 50
+    },
+    "grid_search_params": {
+        "dropout_options": [
+            0
+        ],
+        "learning_rates": [
+            0.001
+        ],
+        "batch_sizes": [
+            16
+        ],
+        "epochs_list": [
+            50
+        ]
+    },
+    "path": "results/task4\\models\\1743486047\\params_tune\\best_model_CNN-LSTM_drop0_lr10_bs16_ep50.pth"
+}
