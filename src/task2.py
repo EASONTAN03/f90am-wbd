@@ -4,9 +4,7 @@ import pandas as pd
 import joblib
 import matplotlib.pyplot as plt
 import seaborn as sns
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.cluster import KMeans
-from sklearn.decomposition import PCA
 from sklearn.metrics import silhouette_score, davies_bouldin_score, calinski_harabasz_score
 from sklearn.manifold import TSNE
 import torch
@@ -14,7 +12,6 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 from itertools import product
-import csv
 import time
 import ast
 
@@ -88,10 +85,10 @@ class Autoencoder(nn.Module):
         # Encoder with BatchNorm and LeakyReLU
         self.encoder = nn.Sequential(
             nn.Linear(input_dim, 256),
-            nn.BatchNorm1d(256),
+            # nn.BatchNorm1d(256),
             nn.LeakyReLU(0.2),  # Avoids dead neurons
             nn.Linear(256, 128),
-            nn.BatchNorm1d(128),
+            # nn.BatchNorm1d(128),
             nn.LeakyReLU(0.2),
             nn.Linear(128, latent_dim),
             nn.Tanh()  # Better for latent representations
@@ -100,10 +97,10 @@ class Autoencoder(nn.Module):
         # Decoder with BatchNorm and LeakyReLU
         self.decoder = nn.Sequential(
             nn.Linear(latent_dim, 128),
-            nn.BatchNorm1d(128),
+            # nn.BatchNorm1d(128),
             nn.LeakyReLU(0.2),
             nn.Linear(128, 256),
-            nn.BatchNorm1d(256),
+            # nn.BatchNorm1d(256),
             nn.LeakyReLU(0.2),
             nn.Linear(256, input_dim),
             nn.Sigmoid()  # Outputs in range [0,1]
@@ -123,33 +120,11 @@ class Autoencoder(nn.Module):
             if m.bias is not None:
                 nn.init.zeros_(m.bias)
 
-# # Define the Autoencoder model
-# class Autoencoder(nn.Module):
-#     def __init__(self, input_dim, latent_dim):
-#         super(Autoencoder, self).__init__()
-#         self.encoder = nn.Sequential(
-#             nn.Linear(input_dim, 128),
-#             nn.ReLU(),
-#             nn.Linear(128, latent_dim),
-#             nn.ReLU()
-#         )
-#         self.decoder = nn.Sequential(
-#             nn.Linear(latent_dim, 128),
-#             nn.ReLU(),
-#             nn.Linear(128, input_dim),
-#             nn.Sigmoid()
-#         )
-    
-#     def forward(self, x):
-#         latent = self.encoder(x)
-#         reconstructed = self.decoder(latent)
-#         return latent, reconstructed
-
 # Training function
 def train_autoencoder(data, batch_sizes, epochs_list, learning_rates):
     train_dataset = TensorDataset(torch.tensor(data, dtype=torch.float32).to(device))
     
-    best_loss = 0
+    best_loss = float("inf")
     best_params = None
     history = {}  # Store loss and accuracy per epoch
 
@@ -192,7 +167,7 @@ def train_autoencoder(data, batch_sizes, epochs_list, learning_rates):
                 print("Early stopping")
                 break
 
-        if train_losses[-1] > best_loss:
+        if train_losses[-1] < best_loss:
             best_loss = train_losses[-1]
             best_params = {'batch_size': batch_size, 'epochs': num_epochs, 'learning_rate': lr}
             best_model = model

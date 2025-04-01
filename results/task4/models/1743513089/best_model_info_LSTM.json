@@ -1,6 +1,6 @@
 {
-    "model": "CNN-LSTM",
-    "val_loss": 0.02946718393026718,
+    "model": "LSTM",
+    "val_loss": 0.027155896271800713,
     "params": {
         "dropout": 0,
         "lr": 0.001,
@@ -21,5 +21,5 @@
             50
         ]
     },
-    "path": "results/task4\\models\\1743486047\\params_tune\\best_model_CNN-LSTM_drop0_lr10_bs16_ep50.pth"
+    "path": "results/task4\\models\\1743513089\\params_tune\\best_model_LSTM_drop0_lr10_bs16_ep50.pth"
 }

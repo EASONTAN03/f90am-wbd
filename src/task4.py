@@ -14,9 +14,8 @@ import numpy as np
 import pandas as pd
 import random
 from itertools import product
-from sklearn.metrics import mean_absolute_percentage_error
 
-models=["Transformer"]  #"CNN-LSTM" "Transformer" "LSTM"
+models=["LSTM","CNN-LSTM","Transformer"]  #"CNN-LSTM" "Transformer" "LSTM"
 dropout_options = [0]
 learning_rates = [0.001]
 batch_sizes = [16]
@@ -605,6 +604,6 @@ for name in models:
             writer.writerow(header)
         writer.writerow(results)
 
-selected_countries = ["Brazil", "United States", "Germany"]  # Add more countries
+selected_countries = ["United States", "China", "Russian Federation", "Brazil"] 
 
 plot_gdp_predictions_multi(actuals, lstm_preds, cnn_lstm_preds, transformer_preds, country_labels, selected_countries, graphs_dir)

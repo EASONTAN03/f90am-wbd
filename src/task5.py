@@ -19,7 +19,7 @@ def set_seed(seed=42):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-set_seed(42)
+set_seed(11)
 
 # ---------------------- Activate CUDA ----------------------
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
