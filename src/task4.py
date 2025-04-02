@@ -57,7 +57,7 @@ data_dir=os.path.join(time_models_dir,"data")
 os.makedirs(data_dir, exist_ok=True)
 params_tune_dir=os.path.join(time_models_dir,"params_tune")
 os.makedirs(params_tune_dir, exist_ok=True)
-graphs_dir=os.path.join(time_models_dir,"output_graphs")
+graphs_dir=os.path.join(time_models_dir,"outputs")
 os.makedirs(graphs_dir, exist_ok=True)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -439,7 +439,19 @@ def save_training_history(history, plot_path):
 
     print(f"Training history saved to {plot_path}")
 
-def plot_gdp_predictions_multi(actuals, lstm_preds, cnn_lstm_preds, transformer_preds, country_labels, selected_countries, save_dir=time_models_dir):
+def save_predict_results(country_labels, predictions, predictions_csv_path):
+    file_exists = os.path.isfile(predictions_csv_path)
+    with open(predictions_csv_path, mode='a', newline='') as file:
+        writer = csv.writer(file)
+        # Write header if the file does not exist
+        if not file_exists:
+            writer.writerow(["country", "predicted_gdp"])
+
+        for country, pred in zip(country_labels, predictions):
+            writer.writerow([country, pred])
+
+
+def plot_gdp_predictions_multi(actuals, lstm_preds, cnn_lstm_preds, transformer_preds, country_labels, selected_countries=None, save_dir=time_models_dir):
     """
     Plots predicted vs actual GDP for multiple countries across different models.
     
@@ -450,11 +462,10 @@ def plot_gdp_predictions_multi(actuals, lstm_preds, cnn_lstm_preds, transformer_
         transformer_preds (numpy array): Transformer model predictions
         country_labels (list): Country names corresponding to each sequence
         selected_countries (list): List of countries to plot
-    """
+    """  
     for selected_country in selected_countries:
         # Get indices for the selected country
         country_indices = [i for i, country in enumerate(country_labels) if country == selected_country]
-
         if not country_indices:
             print(f"No data found for {selected_country}. Skipping...")
             continue  # Skip if no data for this country
@@ -583,6 +594,9 @@ for name in models:
     test_loader = DataLoader(GDPDataset(X_test, y_test), batch_size=best_params['batch_size'] ,shuffle=False)
     actuals, predictions, country_labels, results = evaluate_model(model, test_loader, test_country_labels)
     
+    predictions_csv_path = os.path.join(graphs_dir, f"{name}_test_predictions.csv")
+    save_predict_results(country_labels, predictions, predictions_csv_path)
+
     if name == "LSTM":
         lstm_preds = predictions
     elif name == "CNN-LSTM":
@@ -604,7 +618,10 @@ for name in models:
             writer.writerow(header)
         writer.writerow(results)
 
-selected_countries = ["United States", "China", "Russian Federation", "Brazil"] 
-selected_countries = ["Switzerland", "Denmark"] 
+actuals_csv_path = os.path.join(graphs_dir, f"test_actuals.csv")
+save_predict_results(country_labels, actuals, actuals_csv_path)
 
+selected_countries = ["United States", "China", "Russian Federation", "Brazil", "Switzerland", "Denmark"] 
 plot_gdp_predictions_multi(actuals, lstm_preds, cnn_lstm_preds, transformer_preds, country_labels, selected_countries, graphs_dir)
+predictions_path = os.path.join(graphs_dir, "model_predictions.csv")
+    
