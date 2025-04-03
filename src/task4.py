@@ -57,8 +57,8 @@ data_dir=os.path.join(time_models_dir,"data")
 os.makedirs(data_dir, exist_ok=True)
 params_tune_dir=os.path.join(time_models_dir,"params_tune")
 os.makedirs(params_tune_dir, exist_ok=True)
-graphs_dir=os.path.join(time_models_dir,"outputs")
-os.makedirs(graphs_dir, exist_ok=True)
+output_dir=os.path.join(time_models_dir,"outputs")
+os.makedirs(output_dir, exist_ok=True)
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
@@ -561,7 +561,7 @@ for name in models:
     best_params=config["params"]
     model_path=config["path"]
 
-    save_training_history(history, plot_path=f"{graphs_dir}/{name}_best_model_training_graph")
+    save_training_history(history, plot_path=f"{output_dir}/{name}_best_model_training_graph")
     final_model_path=os.path.join(time_models_dir, f"{name}.pth")
 
     if final_trainer==True:
@@ -594,7 +594,7 @@ for name in models:
     test_loader = DataLoader(GDPDataset(X_test, y_test), batch_size=best_params['batch_size'] ,shuffle=False)
     actuals, predictions, country_labels, results = evaluate_model(model, test_loader, test_country_labels)
     
-    predictions_csv_path = os.path.join(graphs_dir, f"{name}_test_predictions.csv")
+    predictions_csv_path = os.path.join(output_dir, f"{name}_test_predictions.csv")
     save_predict_results(country_labels, predictions, predictions_csv_path)
 
     if name == "LSTM":
@@ -618,10 +618,10 @@ for name in models:
             writer.writerow(header)
         writer.writerow(results)
 
-actuals_csv_path = os.path.join(graphs_dir, f"test_actuals.csv")
+actuals_csv_path = os.path.join(output_dir, f"test_actuals.csv")
 save_predict_results(country_labels, actuals, actuals_csv_path)
 
 selected_countries = ["United States", "China", "Russian Federation", "Brazil", "Switzerland", "Denmark"] 
-plot_gdp_predictions_multi(actuals, lstm_preds, cnn_lstm_preds, transformer_preds, country_labels, selected_countries, graphs_dir)
-predictions_path = os.path.join(graphs_dir, "model_predictions.csv")
+plot_gdp_predictions_multi(actuals, lstm_preds, cnn_lstm_preds, transformer_preds, country_labels, selected_countries, output_dir)
+predictions_path = os.path.join(output_dir, "model_predictions.csv")
     
