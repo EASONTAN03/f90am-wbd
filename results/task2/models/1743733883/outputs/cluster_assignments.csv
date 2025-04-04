@@ -1,0 +1,1096 @@
+country,cluster
+Afghanistan,2
+Albania,0
+Algeria,0
+American Samoa,1
+Andorra,1
+Angola,3
+Antigua and Barbuda,1
+Argentina,1
+Armenia,1
+Aruba,0
+Australia,1
+Austria,1
+Azerbaijan,3
+"Bahamas, The",0
+Bahrain,1
+Bangladesh,0
+Barbados,1
+Belarus,1
+Belgium,1
+Belize,1
+Benin,3
+Bermuda,1
+Bhutan,3
+Bolivia,3
+Bosnia and Herzegovina,1
+Botswana,0
+Brazil,0
+British Virgin Islands,1
+Brunei Darussalam,1
+Bulgaria,0
+Burkina Faso,3
+Burundi,2
+Cabo Verde,3
+Cambodia,3
+Cameroon,3
+Canada,1
+Cayman Islands,1
+Central African Republic,2
+Chad,3
+Channel Islands,0
+Chile,1
+China,1
+Colombia,0
+Comoros,3
+"Congo, Dem. Rep.",2
+"Congo, Rep.",3
+Costa Rica,3
+Cote d'Ivoire,3
+Croatia,1
+Cuba,0
+Curacao,1
+Cyprus,1
+Czechia,1
+Denmark,1
+Djibouti,3
+Dominica,0
+Dominican Republic,0
+Ecuador,0
+"Egypt, Arab Rep.",0
+El Salvador,1
+Equatorial Guinea,3
+Eritrea,3
+Estonia,1
+Eswatini,2
+Ethiopia,2
+Faroe Islands,1
+Fiji,0
+Finland,1
+France,1
+French Polynesia,0
+Gabon,0
+"Gambia, The",3
+Georgia,3
+Germany,1
+Ghana,3
+Gibraltar,0
+Greece,1
+Greenland,0
+Grenada,0
+Guam,0
+Guatemala,3
+Guinea,3
+Guinea-Bissau,3
+Guyana,3
+Haiti,3
+Honduras,3
+"Hong Kong SAR, China",1
+Hungary,0
+Iceland,1
+India,0
+Indonesia,0
+"Iran, Islamic Rep.",0
+Iraq,0
+Ireland,1
+Isle of Man,0
+Israel,0
+Italy,1
+Jamaica,1
+Japan,1
+Jordan,0
+Kazakhstan,1
+Kenya,3
+Kiribati,3
+"Korea, Dem. People's Rep.",0
+"Korea, Rep.",0
+Kosovo,0
+Kuwait,1
+Kyrgyz Republic,3
+Lao PDR,2
+Latin America & Caribbean,0
+Latvia,1
+Lebanon,1
+Lesotho,3
+Liberia,2
+Libya,0
+Liechtenstein,1
+Lithuania,1
+Luxembourg,1
+"Macao SAR, China",1
+Madagascar,3
+Malawi,2
+Malaysia,1
+Maldives,0
+Mali,2
+Malta,1
+Marshall Islands,3
+Mauritania,2
+Mauritius,1
+Mexico,0
+"Micronesia, Fed. Sts.",0
+Moldova,1
+Monaco,0
+Mongolia,3
+Montenegro,1
+Morocco,0
+Mozambique,3
+Myanmar,3
+Namibia,0
+Nauru,0
+Nepal,0
+Netherlands,1
+New Caledonia,0
+New Zealand,1
+Nicaragua,0
+Niger,2
+Nigeria,2
+North Macedonia,1
+Northern Mariana Islands,1
+Norway,1
+Oman,0
+Pakistan,3
+Palau,1
+Panama,0
+Papua New Guinea,2
+Paraguay,0
+Peru,0
+Philippines,0
+Poland,1
+Portugal,1
+Puerto Rico,1
+Qatar,1
+Romania,1
+Russian Federation,1
+Rwanda,3
+Samoa,0
+San Marino,1
+Sao Tome and Principe,3
+Saudi Arabia,1
+Senegal,3
+Serbia,1
+Seychelles,1
+Sierra Leone,3
+Singapore,1
+Sint Maarten (Dutch part),1
+Slovak Republic,1
+Slovenia,1
+Solomon Islands,0
+Somalia,2
+South Africa,3
+South Sudan,2
+Spain,1
+Sri Lanka,0
+St. Kitts and Nevis,0
+St. Lucia,0
+St. Martin (French part),0
+St. Vincent and the Grenadines,1
+Sub-Saharan Africa,0
+Sudan,2
+Suriname,0
+Sweden,1
+Switzerland,1
+Syrian Arab Republic,3
+Tajikistan,1
+Tanzania,3
+Thailand,0
+Timor-Leste,3
+Togo,3
+Tonga,3
+Trinidad and Tobago,1
+Tunisia,0
+Turkiye,1
+Turkmenistan,0
+Turks and Caicos Islands,0
+Tuvalu,0
+Uganda,3
+Ukraine,1
+United Arab Emirates,1
+United Kingdom,1
+United States,1
+Uruguay,1
+Uzbekistan,0
+Vanuatu,3
+"Venezuela, RB",3
+Viet Nam,0
+Virgin Islands (U.S.),1
+West Bank and Gaza,3
+"Yemen, Rep.",3
+Zambia,2
+Zimbabwe,0
+Afghanistan,0
+Albania,3
+Algeria,3
+American Samoa,3
+Andorra,1
+Angola,0
+Antigua and Barbuda,3
+Argentina,3
+Armenia,3
+Aruba,3
+Australia,1
+Austria,1
+Azerbaijan,0
+"Bahamas, The",1
+Bahrain,1
+Bangladesh,2
+Barbados,3
+Belarus,3
+Belgium,1
+Belize,2
+Benin,2
+Bermuda,3
+Bhutan,2
+Bolivia,2
+Bosnia and Herzegovina,3
+Botswana,3
+Brazil,3
+British Virgin Islands,3
+Brunei Darussalam,1
+Bulgaria,0
+Burkina Faso,2
+Burundi,2
+Cabo Verde,3
+Cambodia,2
+Cameroon,2
+Canada,1
+Cayman Islands,1
+Central African Republic,2
+Chad,2
+Channel Islands,0
+Chile,1
+China,1
+Colombia,3
+Comoros,2
+"Congo, Dem. Rep.",2
+"Congo, Rep.",3
+Costa Rica,0
+Cote d'Ivoire,0
+Croatia,3
+Cuba,3
+Curacao,1
+Cyprus,3
+Czechia,1
+Denmark,1
+Djibouti,2
+Dominica,3
+Dominican Republic,1
+Ecuador,1
+"Egypt, Arab Rep.",2
+El Salvador,1
+Equatorial Guinea,2
+Eritrea,2
+Estonia,3
+Eswatini,3
+Ethiopia,2
+Faroe Islands,3
+Fiji,2
+Finland,1
+France,1
+French Polynesia,3
+Gabon,3
+"Gambia, The",2
+Georgia,0
+Germany,1
+Ghana,2
+Gibraltar,1
+Greece,3
+Greenland,0
+Grenada,3
+Guam,1
+Guatemala,2
+Guinea,2
+Guinea-Bissau,2
+Guyana,0
+Haiti,2
+Honduras,2
+"Hong Kong SAR, China",1
+Hungary,1
+Iceland,1
+India,1
+Indonesia,1
+"Iran, Islamic Rep.",3
+Iraq,2
+Ireland,1
+Isle of Man,0
+Israel,3
+Italy,1
+Jamaica,3
+Japan,1
+Jordan,3
+Kazakhstan,3
+Kenya,2
+Kiribati,3
+"Korea, Dem. People's Rep.",0
+"Korea, Rep.",3
+Kosovo,2
+Kuwait,1
+Kyrgyz Republic,0
+Lao PDR,0
+Latin America & Caribbean,1
+Latvia,3
+Lebanon,1
+Lesotho,3
+Liberia,0
+Libya,3
+Liechtenstein,0
+Lithuania,3
+Luxembourg,1
+"Macao SAR, China",3
+Madagascar,2
+Malawi,0
+Malaysia,1
+Maldives,3
+Mali,2
+Malta,3
+Marshall Islands,0
+Mauritania,0
+Mauritius,1
+Mexico,1
+"Micronesia, Fed. Sts.",3
+Moldova,0
+Monaco,0
+Mongolia,0
+Montenegro,3
+Morocco,2
+Mozambique,2
+Myanmar,0
+Namibia,3
+Nauru,1
+Nepal,2
+Netherlands,1
+New Caledonia,3
+New Zealand,1
+Nicaragua,2
+Niger,2
+Nigeria,0
+North Macedonia,3
+Northern Mariana Islands,3
+Norway,1
+Oman,1
+Pakistan,2
+Palau,3
+Panama,1
+Papua New Guinea,0
+Paraguay,3
+Peru,1
+Philippines,2
+Poland,3
+Portugal,3
+Puerto Rico,1
+Qatar,1
+Romania,1
+Russian Federation,1
+Rwanda,2
+Samoa,2
+San Marino,0
+Sao Tome and Principe,2
+Saudi Arabia,1
+Senegal,2
+Serbia,3
+Seychelles,3
+Sierra Leone,0
+Singapore,1
+Sint Maarten (Dutch part),1
+Slovak Republic,1
+Slovenia,1
+Solomon Islands,2
+Somalia,2
+South Africa,3
+South Sudan,0
+Spain,3
+Sri Lanka,3
+St. Kitts and Nevis,1
+St. Lucia,3
+St. Martin (French part),0
+St. Vincent and the Grenadines,3
+Sub-Saharan Africa,2
+Sudan,2
+Suriname,3
+Sweden,1
+Switzerland,1
+Syrian Arab Republic,2
+Tajikistan,3
+Tanzania,2
+Thailand,1
+Timor-Leste,2
+Togo,2
+Tonga,0
+Trinidad and Tobago,1
+Tunisia,3
+Turkiye,1
+Turkmenistan,3
+Turks and Caicos Islands,0
+Tuvalu,2
+Uganda,2
+Ukraine,3
+United Arab Emirates,1
+United Kingdom,1
+United States,1
+Uruguay,3
+Uzbekistan,3
+Vanuatu,3
+"Venezuela, RB",0
+Viet Nam,3
+Virgin Islands (U.S.),1
+West Bank and Gaza,0
+"Yemen, Rep.",2
+Zambia,2
+Zimbabwe,2
+Afghanistan,2
+Albania,1
+Algeria,3
+American Samoa,1
+Andorra,1
+Angola,2
+Antigua and Barbuda,1
+Argentina,1
+Armenia,2
+Aruba,2
+Australia,1
+Austria,1
+Azerbaijan,1
+"Bahamas, The",1
+Bahrain,1
+Bangladesh,3
+Barbados,3
+Belarus,1
+Belgium,1
+Belize,3
+Benin,3
+Bermuda,1
+Bhutan,2
+Bolivia,1
+Bosnia and Herzegovina,1
+Botswana,1
+Brazil,1
+British Virgin Islands,1
+Brunei Darussalam,1
+Bulgaria,2
+Burkina Faso,2
+Burundi,3
+Cabo Verde,3
+Cambodia,3
+Cameroon,3
+Canada,1
+Cayman Islands,1
+Central African Republic,3
+Chad,3
+Channel Islands,0
+Chile,1
+China,1
+Colombia,3
+Comoros,3
+"Congo, Dem. Rep.",3
+"Congo, Rep.",3
+Costa Rica,2
+Cote d'Ivoire,2
+Croatia,1
+Cuba,1
+Curacao,1
+Cyprus,1
+Czechia,1
+Denmark,1
+Djibouti,3
+Dominica,1
+Dominican Republic,3
+Ecuador,1
+"Egypt, Arab Rep.",1
+El Salvador,2
+Equatorial Guinea,3
+Eritrea,2
+Estonia,1
+Eswatini,3
+Ethiopia,3
+Faroe Islands,1
+Fiji,1
+Finland,1
+France,1
+French Polynesia,1
+Gabon,3
+"Gambia, The",2
+Georgia,0
+Germany,1
+Ghana,3
+Gibraltar,1
+Greece,1
+Greenland,2
+Grenada,1
+Guam,1
+Guatemala,3
+Guinea,3
+Guinea-Bissau,2
+Guyana,3
+Haiti,3
+Honduras,3
+"Hong Kong SAR, China",1
+Hungary,1
+Iceland,1
+India,1
+Indonesia,1
+"Iran, Islamic Rep.",1
+Iraq,1
+Ireland,2
+Isle of Man,0
+Israel,2
+Italy,1
+Jamaica,1
+Japan,1
+Jordan,3
+Kazakhstan,3
+Kenya,3
+Kiribati,3
+"Korea, Dem. People's Rep.",1
+"Korea, Rep.",1
+Kosovo,3
+Kuwait,1
+Kyrgyz Republic,2
+Lao PDR,3
+Latin America & Caribbean,1
+Latvia,1
+Lebanon,3
+Lesotho,3
+Liberia,0
+Libya,1
+Liechtenstein,0
+Lithuania,1
+Luxembourg,1
+"Macao SAR, China",1
+Madagascar,3
+Malawi,3
+Malaysia,3
+Maldives,3
+Mali,3
+Malta,1
+Marshall Islands,3
+Mauritania,3
+Mauritius,1
+Mexico,1
+"Micronesia, Fed. Sts.",1
+Moldova,3
+Monaco,1
+Mongolia,2
+Montenegro,1
+Morocco,3
+Mozambique,3
+Myanmar,0
+Namibia,3
+Nauru,1
+Nepal,3
+Netherlands,1
+New Caledonia,1
+New Zealand,1
+Nicaragua,3
+Niger,2
+Nigeria,0
+North Macedonia,1
+Northern Mariana Islands,1
+Norway,2
+Oman,1
+Pakistan,3
+Palau,1
+Panama,1
+Papua New Guinea,0
+Paraguay,1
+Peru,1
+Philippines,1
+Poland,2
+Portugal,1
+Puerto Rico,1
+Qatar,1
+Romania,1
+Russian Federation,1
+Rwanda,3
+Samoa,3
+San Marino,1
+Sao Tome and Principe,3
+Saudi Arabia,1
+Senegal,3
+Serbia,1
+Seychelles,1
+Sierra Leone,2
+Singapore,1
+Sint Maarten (Dutch part),1
+Slovak Republic,1
+Slovenia,1
+Solomon Islands,3
+Somalia,3
+South Africa,1
+South Sudan,2
+Spain,1
+Sri Lanka,1
+St. Kitts and Nevis,1
+St. Lucia,3
+St. Martin (French part),1
+St. Vincent and the Grenadines,1
+Sub-Saharan Africa,3
+Sudan,3
+Suriname,1
+Sweden,1
+Switzerland,1
+Syrian Arab Republic,1
+Tajikistan,3
+Tanzania,3
+Thailand,1
+Timor-Leste,2
+Togo,3
+Tonga,2
+Trinidad and Tobago,1
+Tunisia,3
+Turkiye,1
+Turkmenistan,1
+Turks and Caicos Islands,1
+Tuvalu,1
+Uganda,3
+Ukraine,1
+United Arab Emirates,1
+United Kingdom,1
+United States,1
+Uruguay,1
+Uzbekistan,2
+Vanuatu,1
+"Venezuela, RB",0
+Viet Nam,1
+Virgin Islands (U.S.),1
+West Bank and Gaza,1
+"Yemen, Rep.",3
+Zambia,3
+Zimbabwe,3
+Afghanistan,3
+Albania,1
+Algeria,2
+American Samoa,1
+Andorra,1
+Angola,2
+Antigua and Barbuda,1
+Argentina,1
+Armenia,2
+Aruba,0
+Australia,1
+Austria,1
+Azerbaijan,1
+"Bahamas, The",1
+Bahrain,1
+Bangladesh,2
+Barbados,1
+Belarus,1
+Belgium,1
+Belize,1
+Benin,2
+Bermuda,1
+Bhutan,2
+Bolivia,1
+Bosnia and Herzegovina,1
+Botswana,1
+Brazil,1
+British Virgin Islands,1
+Brunei Darussalam,1
+Bulgaria,0
+Burkina Faso,3
+Burundi,2
+Cabo Verde,1
+Cambodia,2
+Cameroon,2
+Canada,1
+Cayman Islands,1
+Central African Republic,2
+Chad,2
+Channel Islands,0
+Chile,1
+China,1
+Colombia,1
+Comoros,2
+"Congo, Dem. Rep.",2
+"Congo, Rep.",2
+Costa Rica,0
+Cote d'Ivoire,3
+Croatia,1
+Cuba,1
+Curacao,1
+Cyprus,1
+Czechia,1
+Denmark,1
+Djibouti,2
+Dominica,1
+Dominican Republic,1
+Ecuador,1
+"Egypt, Arab Rep.",1
+El Salvador,2
+Equatorial Guinea,2
+Eritrea,3
+Estonia,1
+Eswatini,2
+Ethiopia,2
+Faroe Islands,1
+Fiji,1
+Finland,1
+France,1
+French Polynesia,1
+Gabon,1
+"Gambia, The",3
+Georgia,0
+Germany,1
+Ghana,2
+Gibraltar,1
+Greece,1
+Greenland,0
+Grenada,1
+Guam,1
+Guatemala,1
+Guinea,3
+Guinea-Bissau,3
+Guyana,2
+Haiti,2
+Honduras,1
+"Hong Kong SAR, China",1
+Hungary,1
+Iceland,1
+India,1
+Indonesia,1
+"Iran, Islamic Rep.",1
+Iraq,1
+Ireland,0
+Isle of Man,0
+Israel,2
+Italy,1
+Jamaica,1
+Japan,1
+Jordan,1
+Kazakhstan,1
+Kenya,1
+Kiribati,1
+"Korea, Dem. People's Rep.",0
+"Korea, Rep.",1
+Kosovo,2
+Kuwait,1
+Kyrgyz Republic,3
+Lao PDR,2
+Latin America & Caribbean,1
+Latvia,1
+Lebanon,0
+Lesotho,1
+Liberia,3
+Libya,1
+Liechtenstein,0
+Lithuania,1
+Luxembourg,1
+"Macao SAR, China",1
+Madagascar,2
+Malawi,2
+Malaysia,1
+Maldives,2
+Mali,2
+Malta,1
+Marshall Islands,2
+Mauritania,2
+Mauritius,1
+Mexico,1
+"Micronesia, Fed. Sts.",1
+Moldova,0
+Monaco,0
+Mongolia,3
+Montenegro,1
+Morocco,2
+Mozambique,2
+Myanmar,3
+Namibia,1
+Nauru,1
+Nepal,2
+Netherlands,1
+New Caledonia,1
+New Zealand,1
+Nicaragua,1
+Niger,3
+Nigeria,3
+North Macedonia,1
+Northern Mariana Islands,1
+Norway,0
+Oman,1
+Pakistan,1
+Palau,1
+Panama,1
+Papua New Guinea,3
+Paraguay,1
+Peru,1
+Philippines,1
+Poland,2
+Portugal,1
+Puerto Rico,1
+Qatar,1
+Romania,1
+Russian Federation,1
+Rwanda,2
+Samoa,2
+San Marino,2
+Sao Tome and Principe,1
+Saudi Arabia,1
+Senegal,2
+Serbia,1
+Seychelles,1
+Sierra Leone,3
+Singapore,1
+Sint Maarten (Dutch part),1
+Slovak Republic,1
+Slovenia,1
+Solomon Islands,2
+Somalia,3
+South Africa,1
+South Sudan,3
+Spain,1
+Sri Lanka,1
+St. Kitts and Nevis,1
+St. Lucia,1
+St. Martin (French part),0
+St. Vincent and the Grenadines,1
+Sub-Saharan Africa,1
+Sudan,2
+Suriname,1
+Sweden,1
+Switzerland,1
+Syrian Arab Republic,1
+Tajikistan,2
+Tanzania,2
+Thailand,1
+Timor-Leste,3
+Togo,2
+Tonga,3
+Trinidad and Tobago,1
+Tunisia,1
+Turkiye,1
+Turkmenistan,1
+Turks and Caicos Islands,1
+Tuvalu,2
+Uganda,2
+Ukraine,1
+United Arab Emirates,1
+United Kingdom,1
+United States,1
+Uruguay,1
+Uzbekistan,2
+Vanuatu,2
+"Venezuela, RB",0
+Viet Nam,1
+Virgin Islands (U.S.),1
+West Bank and Gaza,1
+"Yemen, Rep.",2
+Zambia,1
+Zimbabwe,1
+Afghanistan,2
+Albania,0
+Algeria,0
+American Samoa,2
+Andorra,0
+Angola,2
+Antigua and Barbuda,0
+Argentina,0
+Armenia,0
+Aruba,2
+Australia,0
+Austria,0
+Azerbaijan,0
+"Bahamas, The",0
+Bahrain,0
+Bangladesh,0
+Barbados,0
+Belarus,0
+Belgium,0
+Belize,0
+Benin,2
+Bermuda,0
+Bhutan,0
+Bolivia,0
+Bosnia and Herzegovina,0
+Botswana,0
+Brazil,0
+British Virgin Islands,0
+Brunei Darussalam,0
+Bulgaria,0
+Burkina Faso,2
+Burundi,2
+Cabo Verde,0
+Cambodia,0
+Cameroon,2
+Canada,0
+Cayman Islands,2
+Central African Republic,2
+Chad,2
+Channel Islands,0
+Chile,0
+China,3
+Colombia,0
+Comoros,2
+"Congo, Dem. Rep.",2
+"Congo, Rep.",0
+Costa Rica,0
+Cote d'Ivoire,2
+Croatia,0
+Cuba,0
+Curacao,2
+Cyprus,0
+Czechia,0
+Denmark,0
+Djibouti,2
+Dominica,0
+Dominican Republic,0
+Ecuador,0
+"Egypt, Arab Rep.",0
+El Salvador,0
+Equatorial Guinea,0
+Eritrea,1
+Estonia,0
+Eswatini,2
+Ethiopia,2
+Faroe Islands,0
+Fiji,0
+Finland,0
+France,0
+French Polynesia,0
+Gabon,0
+"Gambia, The",2
+Georgia,0
+Germany,0
+Ghana,0
+Gibraltar,2
+Greece,0
+Greenland,0
+Grenada,0
+Guam,0
+Guatemala,0
+Guinea,2
+Guinea-Bissau,2
+Guyana,2
+Haiti,0
+Honduras,0
+"Hong Kong SAR, China",0
+Hungary,0
+Iceland,0
+India,3
+Indonesia,0
+"Iran, Islamic Rep.",0
+Iraq,0
+Ireland,0
+Isle of Man,0
+Israel,0
+Italy,0
+Jamaica,0
+Japan,0
+Jordan,0
+Kazakhstan,0
+Kenya,2
+Kiribati,3
+"Korea, Dem. People's Rep.",0
+"Korea, Rep.",0
+Kosovo,0
+Kuwait,0
+Kyrgyz Republic,2
+Lao PDR,0
+Latin America & Caribbean,2
+Latvia,0
+Lebanon,0
+Lesotho,2
+Liberia,2
+Libya,0
+Liechtenstein,0
+Lithuania,0
+Luxembourg,0
+"Macao SAR, China",0
+Madagascar,0
+Malawi,0
+Malaysia,0
+Maldives,0
+Mali,2
+Malta,0
+Marshall Islands,1
+Mauritania,0
+Mauritius,0
+Mexico,0
+"Micronesia, Fed. Sts.",0
+Moldova,0
+Monaco,0
+Mongolia,2
+Montenegro,0
+Morocco,0
+Mozambique,2
+Myanmar,2
+Namibia,2
+Nauru,2
+Nepal,0
+Netherlands,0
+New Caledonia,0
+New Zealand,0
+Nicaragua,0
+Niger,2
+Nigeria,2
+North Macedonia,0
+Northern Mariana Islands,2
+Norway,0
+Oman,0
+Pakistan,2
+Palau,0
+Panama,0
+Papua New Guinea,0
+Paraguay,0
+Peru,0
+Philippines,0
+Poland,0
+Portugal,0
+Puerto Rico,0
+Qatar,0
+Romania,0
+Russian Federation,0
+Rwanda,0
+Samoa,0
+San Marino,0
+Sao Tome and Principe,0
+Saudi Arabia,0
+Senegal,2
+Serbia,0
+Seychelles,0
+Sierra Leone,2
+Singapore,0
+Sint Maarten (Dutch part),0
+Slovak Republic,0
+Slovenia,0
+Solomon Islands,2
+Somalia,3
+South Africa,0
+South Sudan,2
+Spain,0
+Sri Lanka,0
+St. Kitts and Nevis,0
+St. Lucia,0
+St. Martin (French part),0
+St. Vincent and the Grenadines,2
+Sub-Saharan Africa,2
+Sudan,2
+Suriname,0
+Sweden,0
+Switzerland,0
+Syrian Arab Republic,0
+Tajikistan,0
+Tanzania,2
+Thailand,0
+Timor-Leste,2
+Togo,2
+Tonga,2
+Trinidad and Tobago,0
+Tunisia,0
+Turkiye,0
+Turkmenistan,0
+Turks and Caicos Islands,2
+Tuvalu,2
+Uganda,2
+Ukraine,0
+United Arab Emirates,0
+United Kingdom,0
+United States,0
+Uruguay,0
+Uzbekistan,0
+Vanuatu,0
+"Venezuela, RB",2
+Viet Nam,0
+Virgin Islands (U.S.),0
+West Bank and Gaza,0
+"Yemen, Rep.",2
+Zambia,2
+Zimbabwe,2
