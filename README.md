@@ -66,3 +66,5 @@ World bank data project instruction
         - timestamp_task4
         - timestamp_task5
     + Run src/task6.py
+      
+Collaborators: Tan Beng Seh and Ng Rou Yan
