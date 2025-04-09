@@ -1,0 +1,4 @@
+model_path,params,mse,mae,mape
+results/task6\models\1744210755\LSTM.pth,"{'dropout': 0, 'lr': 0.001, 'batch_size': 16, 'epochs': 50}",36349864.0,2983.009765625,13.39496225118637
+results/task6\models\1744210755\CNN-LSTM.pth,"{'dropout': 0, 'lr': 0.001, 'batch_size': 16, 'epochs': 50}",37639892.0,3376.42138671875,14.19890820980072
+results/task6\models\1744210755\Transformer.pth,"{'dropout': 0, 'lr': 0.001, 'batch_size': 16, 'epochs': 50}",37319032.0,3260.548095703125,14.170783758163452

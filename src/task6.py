@@ -16,57 +16,42 @@ import random
 import csv
 from joblib import load
 
+seed=11
+
 #predict model
 models=["LSTM","CNN-LSTM","Transformer"]  #"CNN-LSTM" "Transformer" "LSTM"
-dropout_options = [0]
-learning_rates = [0.001]
 batch_sizes = [16]
 epochs_list = [50]
+learning_rates = [0.0001]
+dropout_options = [0]
 
-#vae
-input_dim=10*10+5+219
-hidden_dim = 128
+# vae
+hidden_dim = 256
 latent_dim = 20
-vae_batch_sizes = 32
 
-
-sequences_per_country = 30
-test_size = 5
-val_size = 3
-
-final_trainer=False
-final_train_epochs=5
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-def set_seed(seed=11):
-    random.seed(seed)
+def set_seed(seed=42):
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-
-seed=11
+    
 set_seed(seed)
 
-# -------------------------------
-# Configuration
-# -------------------------------
-# data dir
+df = pd.read_csv(r"data/final_impute_world_bank_data_dev.csv")
+country_features = len(df["country"].unique())
+input_dim = 10 * 10 + country_features + 5     # 10*10=100, plus 5 plus country_features (e.g., 219) equals 324
+
+timestamp_task4 = "1744209367"
 result_dir_task4 = "results/task4"
-timestamp_task4 = "1743690723"
-task4_dir=os.path.join(result_dir_task4, "models", timestamp_task4)
+task4_model_dir = os.path.join(result_dir_task4, "models", timestamp_task4)
+task4_data_dir = os.path.join(task4_model_dir, "data")
 
-# vae model dir
+timestamp_task5 = "1744210542"
 result_dir_task5 = "results/task5"
-timestamp_task5 = "1743702214"
-
-vae_path = os.path.join(result_dir_task5,"models",timestamp_task5,"vae_best.pth")
+vae_path = os.path.join(result_dir_task5,"models",timestamp_task5,"vae.pth")
 vae_sclaer_path = os.path.join(result_dir_task5,"models",timestamp_task5,"vae_scaler.joblib")
 
-result_dir = "results/task6"
-os.makedirs(result_dir, exist_ok=True)
 timestamp = int(time.time())
 result_dir = "results/task6"
 os.makedirs(result_dir, exist_ok=True)
@@ -74,170 +59,44 @@ models_dir = os.path.join(result_dir, "models")
 os.makedirs(models_dir, exist_ok=True)
 time_models_dir = os.path.join(models_dir, str(timestamp))
 os.makedirs(time_models_dir, exist_ok=True)
-data_dir=os.path.join(time_models_dir,"data")
-os.makedirs(data_dir, exist_ok=True)
 params_tune_dir=os.path.join(time_models_dir,"params_tune")
 os.makedirs(params_tune_dir, exist_ok=True)
-graphs_dir=os.path.join(time_models_dir,"outputs")
-os.makedirs(graphs_dir, exist_ok=True)
+output_dir=os.path.join(time_models_dir,"outputs")
+os.makedirs(output_dir, exist_ok=True)
 
-# -------------------------------
-# Load original data (Task 4)
-# -------------------------------
-features_sclaer_path=os.path.join(task4_dir, "vae_scaler.joblib")
-data_dir_task4 = os.path.join(task4_dir, "data")
-X_train = np.load(os.path.join(data_dir_task4, "X_train.npy")) 
-y_train = np.load(os.path.join(data_dir_task4, "y_train.npy")) 
-X_val = np.load(os.path.join(data_dir_task4, "X_val.npy")) 
-y_val = np.load(os.path.join(data_dir_task4, "y_val.npy")) 
-X_test = np.load(os.path.join(data_dir_task4, "X_test.npy")) 
-y_test = np.load(os.path.join(data_dir_task4, "y_test.npy")) 
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-# Optional: Load test country labels for visualizations
-test_country_labels = pd.read_csv(os.path.join(task4_dir, "outputs", "test_actuals.csv"))["country"].tolist()
-
-# ---------------------- VAE Model ----------------------
-
-class VAE(nn.Module):
-    def __init__(self, input_dim, hidden_dim=128, latent_dim=20):
-        super(VAE, self).__init__()
-        self.encoder = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, hidden_dim // 2),
-            nn.ReLU()
-        )
-        self.fc_mu = nn.Linear(hidden_dim // 2, latent_dim)
-        self.fc_logvar = nn.Linear(hidden_dim // 2, latent_dim)
-        # Decoder output activation is Sigmoid to output values in [0,1]
-        self.decoder = nn.Sequential(
-            nn.Linear(latent_dim, hidden_dim // 2),
-            nn.ReLU(),
-            nn.Linear(hidden_dim // 2, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, input_dim),
-            nn.Sigmoid()
-        )
-    
-    def encode(self, x):
-        h = self.encoder(x)
-        mu = self.fc_mu(h)
-        logvar = self.fc_logvar(h)
-        return mu, logvar
-    
-    def reparameterize(self, mu, logvar):
-        std = torch.exp(0.5 * logvar)
-        eps = torch.randn_like(std)
-        return mu + eps * std
-    
-    def decode(self, z):
-        return self.decoder(z)
-    
-    def forward(self, x):
-        mu, logvar = self.encode(x)
-        z = self.reparameterize(mu, logvar)
-        recon_x = self.decode(z)
-        return recon_x, mu, logvar
-
-vae = VAE(input_dim=input_dim, hidden_dim=hidden_dim, latent_dim=latent_dim).to(device) # 10*229+5
-vae.load_state_dict(torch.load(vae_path))
-vae.eval()
-
-n_synthetic = X_train.shape[0]  # Match original size
-z_samples = torch.randn(n_synthetic, latent_dim).to(device)
-
+features_sclaer_path=os.path.join(task4_model_dir, "scaler.joblib")
+scaler = load(features_sclaer_path)
 vae_scaler = load(vae_sclaer_path)
 
-with torch.no_grad():
-    synthetic_data = vae.decode(z_samples).cpu().numpy()
+X_train = np.load(os.path.join(task4_data_dir, "X_train.npy")) 
+y_train = np.load(os.path.join(task4_data_dir, "y_train.npy")) 
+X_val = np.load(os.path.join(task4_data_dir, "X_val.npy")) 
+y_val = np.load(os.path.join(task4_data_dir, "y_val.npy")) 
+X_test = np.load(os.path.join(task4_data_dir, "X_test.npy")) 
+y_test = np.load(os.path.join(task4_data_dir, "y_test.npy")) 
+test_country_labels = np.load(os.path.join(task4_data_dir, "test_country_labels.npy")) 
 
-# Inverse transform to get back to original scale
-synthetic_data_unscaled = vae_scaler.inverse_transform(synthetic_data)
-
-# Split into input/output
-print(synthetic_data_unscaled.shape)
-# synthetic_input = synthetic_data_unscaled[:, :10]+synthetic_data_unscaled[:, 15:]
-# synthetic_output = synthetic_data_unscaled[:, 10:15]  # shape: (n_synthetic, 5)
-print(X_train.shape)
-
-n_samples = synthetic_data_unscaled.shape[0]
-
-numerical_flat = synthetic_data_unscaled[:, 0:100]  # Shape: (4818, 100)
-y_train_reconstructed = synthetic_data_unscaled[:, 100:105]  # Shape: (4818, 5)
-country_data_reconstructed = synthetic_data_unscaled[:, 105:324]  # Shape: (4818, 219)
-
-numerical_data_reconstructed = numerical_flat.reshape(4818, 10, 10)  # Shape: (4818, 10, 10)
-country_data_expanded = np.tile(country_data_reconstructed[:, np.newaxis, :], (1, 10, 1))  # Shape: (4818, 10, 219)
-X_train_reconstructed = np.concatenate((numerical_data_reconstructed, country_data_expanded), axis=2)  # Shape: (4818, 10, 229)
-
-# Verify shapes
-print(f"X_train_reconstructed shape: {X_train_reconstructed.shape}")  # Expected: (4818, 10, 229)
-print(f"y_train_reconstructed shape: {y_train_reconstructed.shape}")  # Expected: (4818, 5)
-
-# -------------------------------
-# Combine Original and Synthetic
-# -------------------------------
-scaler_all = load(features_sclaer_path)
-
-def scale_sequences(sequences):
+def scale_sequences(task4_scaler,sequences):
     num_features_total = sequences.shape[2]  # 229
     flat = sequences.reshape(-1, num_features_total)
-    flat_scaled = scaler_all.transform(flat)
+    flat_scaled = task4_scaler.transform(flat)
     return flat_scaled.reshape(sequences.shape)
 
-X_train_reconstructed_scaled = scale_sequences(X_train_reconstructed)
-X_augmented = np.concatenate([X_train, X_train_reconstructed_scaled], axis=0)
-y_augmented = np.concatenate([y_train, y_train_reconstructed], axis=0)
 
-print("Original training data:", X_train.shape)
-print("Synthetic data:", X_train_reconstructed.shape)
-print("Augmented data:", X_augmented.shape)
-
-# -------------------------------
-# GDP Dataset
-# -------------------------------
-class GDPDataset(Dataset):
-    def __init__(self, X, y):
-        self.X = torch.tensor(X, dtype=torch.float32)
-        self.y = torch.tensor(y, dtype=torch.float32)
-    
-    def __len__(self):
-        return len(self.X)
-    
-    def __getitem__(self, idx):
-        return self.X[idx], self.y[idx]
-
-# -------------------------------
-# Model Definitions
-# -------------------------------
-class EarlyStopping:
+class EarlyStopping():
     def __init__(self, patience=5, min_delta=0, verbose=True, path="best_model.pth"):
-        """
-        Early stopping to stop training when validation loss stops improving.
-
-        Args:
-            patience (int): Number of epochs to wait before stopping if no improvement.
-            min_delta (float): Minimum change in loss to qualify as an improvement.
-            verbose (bool): If True, prints early stopping updates.
-            path (str): Path to save the best model.
-        """
         self.patience = patience
         self.min_delta = min_delta
         self.verbose = verbose
         self.path = path  # File path to save best model
-        self.best_loss = float("inf")  # Initialize with a very high loss
-        self.counter = 0  # Counts epochs without improvement
-        self.early_stop = False  # Flag to signal early stopping
-        self.best_model_state = None  # Store the best model weights in memory
+        self.best_loss = float("inf")
+        self.counter = 0
+        self.early_stop = False
+        self.best_model_state = None
 
     def __call__(self, val_loss, model):
-        """
-        Checks if validation loss improved, otherwise increments counter.
-
-        Args:
-            val_loss (float): The current validation loss.
-            model (torch.nn.Module): The model being trained.
-        """
         if val_loss < self.best_loss - self.min_delta:  # Check for improvement
             self.best_loss = val_loss
             self.counter = 0  # Reset counter
@@ -257,7 +116,18 @@ class EarlyStopping:
             if self.counter >= self.patience:  # Stop if patience exceeded
                 self.early_stop = True
                 if self.verbose:
-                    print(f"Early stopping triggered after {self.patience} epochs of no improvement.")
+                    print(f"Early stopping triggered after {self.patience}")
+
+class GDPDataset(Dataset):
+    def __init__(self, X, y):
+        self.X = torch.tensor(X, dtype=torch.float32)
+        self.y = torch.tensor(y, dtype=torch.float32)
+    
+    def __len__(self):
+        return len(self.X)
+    
+    def __getitem__(self, idx):
+        return self.X[idx], self.y[idx]
 
 class LSTMModel(nn.Module):
     def __init__(self, hidden_size=128, num_layers=2, dropout_rate=0.3):
@@ -464,7 +334,6 @@ def save_predict_results(country_labels, values, csv_path, label="predicted_gdp"
     file_exists = os.path.isfile(csv_path)
     with open(csv_path, mode='a', newline='') as file:
         writer = csv.writer(file)
-
         if not file_exists:
             writer.writerow(["country", label])
 
@@ -472,19 +341,132 @@ def save_predict_results(country_labels, values, csv_path, label="predicted_gdp"
             formatted_val = "[" + ", ".join(f"{v:.2f}" for v in val) + "]"
             writer.writerow([country, formatted_val])
 
+def plot_gdp_predictions_multi(actuals, lstm_preds, cnn_lstm_preds, transformer_preds, country_labels, selected_countries=None, save_dir=time_models_dir):
+    for selected_country in selected_countries:
+        # Get indices for the selected country
+        country_indices = [i for i, country in enumerate(country_labels) if country == selected_country]
+        if not country_indices:
+            print(f"No data found for {selected_country}. Skipping...")
+            continue  # Skip if no data for this country
+
+        # Extract relevant actual and predicted values
+        actual_values = actuals[country_indices].flatten()
+
+        plt.figure(figsize=(8, 5))
+        plt.plot(actual_values, label="Actual GDP", marker='o', linestyle='-', color='black')
+
+        if lstm_preds is not None:
+            lstm_values = lstm_preds[country_indices].flatten()
+            plt.plot(lstm_values, label="LSTM Predictions", marker='x', linestyle='--', color='blue')
+        if cnn_lstm_preds is not None:
+            cnn_lstm_values = cnn_lstm_preds[country_indices].flatten()
+            plt.plot(cnn_lstm_values, label="CNN-LSTM Predictions", marker='s', linestyle='--', color='red')
+        if transformer_preds is not None:
+            transformer_values = transformer_preds[country_indices].flatten()
+            plt.plot(transformer_values, label="Transformer Predictions", marker='d', linestyle='--', color='green')
+
+        plt.title(f"GDP Predictions vs Actual for {selected_country}")
+        plt.xlabel("Sequence Index")
+        plt.ylabel("GDP (after inverse log transform)")
+        plt.legend()
+        plt.grid(True)
+        plt.savefig(os.path.join(save_dir, f"{selected_country}_gdp_predictions.png"))
+        plt.close()
+
+class VAE(nn.Module):
+    def __init__(self, input_dim, hidden_dim=128, latent_dim=20):
+        super(VAE, self).__init__()
+        self.encoder = nn.Sequential(
+            nn.Linear(input_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim // 2),
+            nn.ReLU()
+        )
+        self.fc_mu = nn.Linear(hidden_dim // 2, latent_dim)
+        self.fc_logvar = nn.Linear(hidden_dim // 2, latent_dim)
+        # Decoder output activation is Sigmoid to output values in [0,1]
+        self.decoder = nn.Sequential(
+            nn.Linear(latent_dim, hidden_dim // 2),
+            nn.ReLU(),
+            nn.Linear(hidden_dim // 2, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, input_dim),
+            nn.Sigmoid()
+        )
+    
+    def encode(self, x):
+        h = self.encoder(x)
+        mu = self.fc_mu(h)
+        logvar = self.fc_logvar(h)
+        return mu, logvar
+    
+    def reparameterize(self, mu, logvar):
+        std = torch.exp(0.5 * logvar)
+        eps = torch.randn_like(std)
+        return mu + eps * std
+    
+    def decode(self, z):
+        return self.decoder(z)
+    
+    def forward(self, x):
+        mu, logvar = self.encode(x)
+        z = self.reparameterize(mu, logvar)
+        recon_x = self.decode(z)
+        return recon_x, mu, logvar
+
+# VAE
+vae = VAE(input_dim=input_dim, hidden_dim=hidden_dim, latent_dim=latent_dim).to(device) # 10*229+5
+vae.load_state_dict(torch.load(vae_path))
+
+vae.eval()
+n_synthetic = X_train.shape[0]  # Match original size
+z_samples = torch.randn(n_synthetic, latent_dim).to(device)
+vae_scaler = load(vae_sclaer_path)
+with torch.no_grad():
+    synthetic_data = vae.decode(z_samples).cpu().numpy()
+
+synthetic_data_unscaled = vae_scaler.inverse_transform(synthetic_data)
+print(synthetic_data_unscaled.shape)
+print(X_train.shape)
+
+n_samples = synthetic_data_unscaled.shape[0]
+numerical_flat = synthetic_data_unscaled[:, 0:100]  # Shape: (4818, 100)
+country_data_reconstructed = synthetic_data_unscaled[:, 100:319]  #  Shape: (4818, 219)
+y_train_reconstructed = synthetic_data_unscaled[:, 319:] 
+
+numerical_data_reconstructed = numerical_flat.reshape(n_samples, 10, 10)
+country_data_expanded = np.tile(country_data_reconstructed[:, np.newaxis, :], (1, 10, 1))  # (n_samples, 10, 219)
+X_train_reconstructed = np.concatenate((numerical_data_reconstructed, country_data_expanded), axis=2)  # (n_samples, 10, 229)
+
+# Verify shapes
+print(f"X_train_reconstructed shape: {X_train_reconstructed.shape}")  # Expected: (4818, 10, 229)
+print(f"y_train_reconstructed shape: {y_train_reconstructed.shape}")  # Expected: (4818, 5)
+
+X_augmented = np.concatenate([X_train, X_train_reconstructed], axis=0)
+y_augmented = np.concatenate([y_train, y_train_reconstructed], axis=0)
+
+X_augmented_scale = scale_sequences(scaler, X_augmented)
+X_val_scale = scale_sequences(scaler, X_val)
+X_test_scale = scale_sequences(scaler, X_test)
+
+print("Original training data:", X_train[0][0])
+print("Synthetic data:", X_train_reconstructed[0][0])
+print("Augmented data:", X_augmented[-1][-1])
+
+print("Original training data:", X_train.shape)
+print("Synthetic data:", X_train_reconstructed.shape)
+print("Augmented data:", X_augmented.shape)
+
 MODEL_MAPPING = {
     "LSTM": LSTMModel,
     "CNN-LSTM": CNNLSTMModel,
     "Transformer": TransformerModel
 }
 
-# -------------------------------
-# Train and Evaluate on Augmented Data
-# -------------------------------
 # Hyperparameter grid search
-lstm_preds = None
-cnn_lstm_preds = None
-transformer_preds = None
+aug_lstm_preds = None
+aug_cnn_lstm_preds = None
+aug_transformer_preds = None
 
 for name in models:
     best_model_info = {"model": None, "val_loss": float("inf"), "params": {}, "grid_search_params":{}, "path": None}
@@ -495,8 +477,8 @@ for name in models:
     # for dropout, lr, batch_size, epochs in param_grid:
         set_seed(seed)
         print(f"Training {name} with Dropout={dropout}, LR={lr}, Batch={batch_size}, Epochs={epochs}")
-        train_loader = DataLoader(GDPDataset(X_train, y_train), batch_size=batch_size, shuffle=True)
-        val_loader = DataLoader(GDPDataset(X_val, y_val), batch_size=batch_size)
+        train_loader = DataLoader(GDPDataset(X_augmented_scale, y_augmented), batch_size=batch_size, shuffle=True)
+        val_loader = DataLoader(GDPDataset(X_val_scale, y_val), batch_size=batch_size)
 
         model = model_class(dropout_rate=dropout)
         
@@ -542,48 +524,26 @@ for name in models:
     best_params=config["params"]
     model_path=config["path"]
 
-    save_training_history(history, plot_path=f"{graphs_dir}/{name}_best_model_training_graph")
+    save_training_history(history, plot_path=f"{output_dir}/{name}_best_model_training_graph")
     final_model_path=os.path.join(time_models_dir, f"{name}.pth")
-
-    if final_trainer==True:
-        
-        print(f"Training Final {name} with Dropout={best_params['dropout']}, LR={best_params['lr']}, Batch={best_params['batch_size']}, Epochs={best_params['epochs']}")
-
-        X_final_train = np.concatenate([X_train, X_val], axis=0)
-        y_final_train = np.concatenate([y_train, y_val], axis=0)
-        final_train_loader = DataLoader(GDPDataset(X_final_train, y_final_train), batch_size=best_params['batch_size'], shuffle=False)
-        
-        model=model_class(dropout_rate=best_params["dropout"])
-        train_losses, val_losses, val_loss, model_path = train_model(
-                model, train_loader=final_train_loader, val_loader=None,
-                lr=best_params["lr"], epochs=final_train_epochs, model_path=final_model_path
-        )
-
-        torch.save(model.state_dict(), model_path, _use_new_zipfile_serialization=False)
-
-        history={
-            'batch_size': best_params['batch_size'], 'epochs': final_train_epochs, 'lr': best_params["lr"], 
-            'train_losses': train_losses, 'val_losses': val_losses,
-        }
-        save_training_history(history, plot_path=f"{time_models_dir}/{name}_final_model_training_graph")
 
     model=model_class(dropout_rate=best_params["dropout"])
     model.load_state_dict(torch.load(model_path))
 
     torch.save(model.state_dict(), final_model_path, _use_new_zipfile_serialization=False)
 
-    test_loader = DataLoader(GDPDataset(X_test, y_test), batch_size=best_params['batch_size'] ,shuffle=False)
+    test_loader = DataLoader(GDPDataset(X_test_scale, y_test), batch_size=best_params['batch_size'] ,shuffle=False)
     actuals, predictions, country_labels, results = evaluate_model(model, test_loader, test_country_labels)
-    predictions_csv_path = os.path.join(graphs_dir, f"{name}_test_predictions.csv")
+    predictions_csv_path = os.path.join(output_dir, f"{name}_test_predictions.csv")
     save_predict_results(country_labels, predictions, predictions_csv_path, label="predicted_gdp")
 
 
     if name == "LSTM":
-        lstm_preds = predictions
+        aug_lstm_preds = predictions
     elif name == "CNN-LSTM":
-        cnn_lstm_preds = predictions
+        aug_cnn_lstm_preds = predictions
     elif name == "Transformer":
-        transformer_preds = predictions
+        aug_transformer_preds = predictions
         
     # Save results to a CSV file
     os.makedirs(result_dir, exist_ok=True)
@@ -599,39 +559,7 @@ for name in models:
             writer.writerow(header)
         writer.writerow(results)
 
-actuals_csv_path = os.path.join(graphs_dir, f"test_actuals.csv")
-save_predict_results(country_labels, actuals, actuals_csv_path, label="actual_gdp")
-
-# # -------------------------------
-# # Load Original Results from Task 4
-# # -------------------------------
-# with open("results/task4/results.csv", "r") as f:
-#     reader = csv.reader(f)
-#     next(reader)  # skip header
-#     for row in reader:
-#         model_name = os.path.basename(row[0]).replace(".pth", "")
-#         if model_name in results:
-#             results[model_name]["mape_original"] = float(row[-1])
-#             results[model_name]["mae_original"] = float(row[-2])
-#             results[model_name]["mse_original"] = float(row[-3])
-
-# # -------------------------------
-# # Generate Comparison Table
-# # -------------------------------
-# table_path = os.path.join(vae_output_dir, "performance_comparison.csv")
-
-# with open(table_path, "w", newline='') as f:
-#     writer = csv.writer(f)
-#     writer.writerow(["Model", "MAPE (Original)", "MAPE (Augmented)", "MAE (Original)", "MAE (Augmented)", "MSE (Original)", "MSE (Augmented)"])
-#     for model_name, data in results.items():
-#         writer.writerow([
-#             model_name,
-#             f"{data.get('mape_original', 'N/A'):.2f}",
-#             f"{data['mape']:.2f}",
-#             f"{data.get('mae_original', 'N/A'):.2f}",
-#             f"{data['mae']:.2f}",
-#             f"{data.get('mse_original', 'N/A'):.2f}",
-#             f"{data['mse']:.2f}"
-#         ])
-
-# print("\n📊 Performance comparison table saved to:", table_path)
+selected_countries = ["United States", "China", "Russian Federation", "Brazil", "Switzerland", "Denmark"] 
+plot_gdp_predictions_multi(aug_lstm_preds, aug_cnn_lstm_preds, aug_transformer_preds, country_labels, selected_countries, output_dir)
+task6_result_df = pd.read_csv(result_path)
+print(task6_result_df.tail(3))

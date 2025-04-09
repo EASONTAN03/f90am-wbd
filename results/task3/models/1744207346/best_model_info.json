@@ -1,0 +1,25 @@
+{
+    "accuracy": 0.7257142857142858,
+    "loss": 0.8686658322811127,
+    "f1": 0.716445554810553,
+    "params": {
+        "lr": 0.0001,
+        "batch_size": 16,
+        "epochs": 150
+    },
+    "grid_search_params": {
+        "learning_rates": [
+            0.0001
+        ],
+        "batch_sizes": [
+            16,
+            32
+        ],
+        "epochs_list": [
+            50,
+            100,
+            150
+        ]
+    },
+    "path": "results/task3\\models\\1744207346\\params_tune\\best_model_lr1_bs16_ep150.pth"
+}

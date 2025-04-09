@@ -13,18 +13,15 @@ import json
 import numpy as np
 import pandas as pd
 import random
+from joblib import dump
+import json
 from itertools import product
 
 models=["LSTM","CNN-LSTM","Transformer"]  #"CNN-LSTM" "Transformer" "LSTM"
 dropout_options = [0]
-learning_rates = [0.001]
+learning_rates = [0.0001]
 batch_sizes = [16]
 epochs_list = [50]
-
-# dropout_options = [0,0.1,0.2,0.3,0.4,0.5]
-# learning_rates = [0.0001,0.001,0.1]
-# batch_sizes = [8,16,34,64]
-# epochs_list = [10,20,30,40,50]
 
 seed=11
 
@@ -32,15 +29,10 @@ sequences_per_country = 30
 test_size = 5
 val_size = 3
 
-final_trainer=False
-final_train_epochs=5
-
 def set_seed(seed=42):
-    random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
-    torch.cuda.manual_seed_all(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
@@ -79,7 +71,7 @@ df = df.sort_values(["country", "date"]).reset_index(drop=True)
 #  One-hot encode country names 
 df_countries = pd.get_dummies(df["country"], prefix="Country").astype(int)
 
-# Scale GDP before log transformation
+# GDP log transformation
 df[target] = np.log1p(df[target])
 
 # Concatenate one-hot encoded countries
@@ -93,7 +85,7 @@ def create_sequences(data, input_length=10, output_length=5):
     
     for i in range(len(data) - input_length - output_length + 1):
         X.append(data[i:i+input_length, :]) 
-        y.append(data[i+input_length:i+input_length+output_length, -1])  # GDP target
+        y.append(data[i+input_length:i+input_length+output_length, 0])  # GDP target
     return np.array(X), np.array(y)
 
 def save_npy(X, result_dir, var_name):
@@ -104,7 +96,7 @@ all_X_train, all_y_train, all_X_val, all_y_val, all_X_test, all_y_test = [], [],
 test_country_labels = []
 
 for country in df["country"].unique():
-    country_data = df_scaled[df_scaled["country"] == country][features + [target]].values
+    country_data = df_scaled[df_scaled["country"] == country][[target]+features].values
     #  Ensure at least 15 years of data exist for a full sequence 
     if len(country_data) < 15:
         print(f"⚠ Skipping {country} needs at least 15).")
@@ -116,7 +108,7 @@ for country in df["country"].unique():
 
     X_train, y_train = X[:train_size], y[:train_size]  
     X_val, y_val = X[train_size:train_size + val_size], y[train_size:train_size + val_size]  
-    X_test, y_test = X[train_size + val_size:], y[train_size + val_size:]  # ✅ Last 5 sequences → Test Set
+    X_test, y_test = X[train_size + val_size:], y[train_size + val_size:]  # Last 5 sequences → Test Set
 
     #  Append Data 
     all_X_train.append(X_train)
@@ -128,6 +120,8 @@ for country in df["country"].unique():
 
     #  Ensure Each Country Has Test Data 
     test_country_labels.extend([country] * len(X_test))
+
+save_npy(np.array(test_country_labels), data_dir, "test_country_labels")
 
 # Convert lists to numpy arrays
 X_train = np.concatenate(all_X_train, axis=0)
@@ -150,73 +144,48 @@ print(f"Total Validation Sequences: {sum(len(x) for x in all_X_val)}")
 print(f"Total Test Sequences: {sum(len(x) for x in all_X_test)}")
 
 # ---------------------- Feature Scaling After Splitting ----------------------
-num_features = len(features)  
+num_features_total = X_train.shape[2]  # Should be 229
 
-# Flatten all training sequences to (n_samples*seq_len, n_features)
-train_features = np.concatenate([
-    x[:, :, :-1].reshape(-1, num_features)  # Use num_features instead of len(features)
+# Combine all train sequences into (samples*time, 229)
+train_data_flat = np.concatenate([
+    x.reshape(-1, num_features_total)
     for x in all_X_train
 ])
 
-scaler_X = StandardScaler().fit(train_features)  # Fit only once on training data
+# Fit scaler on all input features including GDP
+scaler_all = StandardScaler().fit(train_data_flat)
+dump(scaler_all, os.path.join(time_models_dir, "scaler.joblib"))
 
-# Function to scale features while keeping GDP unchanged
 def scale_sequences(sequences):
-    features = sequences[:, :, :-1].reshape(-1, num_features)
-    gdp = sequences[:, :, -1:]  # Keep GDP unchanged
-    features_scaled = scaler_X.transform(features).reshape(sequences.shape[0], sequences.shape[1], num_features)
-    return np.concatenate([features_scaled, gdp], axis=-1)
+    num_features_total = sequences.shape[2]  # 229
+    flat = sequences.reshape(-1, num_features_total)
+    flat_scaled = scaler_all.transform(flat)
+    return flat_scaled.reshape(sequences.shape)
 
 # Apply scaling
-X_train = scale_sequences(np.concatenate(all_X_train))
-X_val = scale_sequences(np.concatenate(all_X_val))
-X_test = scale_sequences(np.concatenate(all_X_test))
+X_train_scale = scale_sequences(np.concatenate(all_X_train))
+X_val_scale = scale_sequences(np.concatenate(all_X_val))
+X_test_scale = scale_sequences(np.concatenate(all_X_test))
 
 # Verify shapes
 print(f"Shapes after scaling:")
-print(f"X_train: {X_train.shape}, y_train: {y_train.shape}")
-print(f"X_val: {X_val.shape}, y_val: {y_val.shape}")
-print(f"X_test: {X_test.shape}, y_test: {y_test.shape}")
+print(f"X_train: {X_train_scale.shape}, y_train: {y_train.shape}")
+print(f"X_val: {X_val_scale.shape}, y_val: {y_val.shape}")
+print(f"X_test: {X_test_scale.shape}, y_test: {y_test.shape}")
 
-class GDPDataset(Dataset):
-    def __init__(self, X, y):
-        self.X = torch.tensor(X, dtype=torch.float32)
-        self.y = torch.tensor(y, dtype=torch.float32)
-    
-    def __len__(self):
-        return len(self.X)
-    
-    def __getitem__(self, idx):
-        return self.X[idx], self.y[idx]
-    
-class EarlyStopping:
+
+class EarlyStopping():
     def __init__(self, patience=5, min_delta=0, verbose=True, path="best_model.pth"):
-        """
-        Early stopping to stop training when validation loss stops improving.
-
-        Args:
-            patience (int): Number of epochs to wait before stopping if no improvement.
-            min_delta (float): Minimum change in loss to qualify as an improvement.
-            verbose (bool): If True, prints early stopping updates.
-            path (str): Path to save the best model.
-        """
         self.patience = patience
         self.min_delta = min_delta
         self.verbose = verbose
         self.path = path  # File path to save best model
-        self.best_loss = float("inf")  # Initialize with a very high loss
-        self.counter = 0  # Counts epochs without improvement
-        self.early_stop = False  # Flag to signal early stopping
-        self.best_model_state = None  # Store the best model weights in memory
+        self.best_loss = float("inf")
+        self.counter = 0
+        self.early_stop = False
+        self.best_model_state = None
 
     def __call__(self, val_loss, model):
-        """
-        Checks if validation loss improved, otherwise increments counter.
-
-        Args:
-            val_loss (float): The current validation loss.
-            model (torch.nn.Module): The model being trained.
-        """
         if val_loss < self.best_loss - self.min_delta:  # Check for improvement
             self.best_loss = val_loss
             self.counter = 0  # Reset counter
@@ -236,7 +205,18 @@ class EarlyStopping:
             if self.counter >= self.patience:  # Stop if patience exceeded
                 self.early_stop = True
                 if self.verbose:
-                    print(f"Early stopping triggered after {self.patience} epochs of no improvement.")
+                    print(f"Early stopping triggered after {self.patience}")
+
+class GDPDataset(Dataset):
+    def __init__(self, X, y):
+        self.X = torch.tensor(X, dtype=torch.float32)
+        self.y = torch.tensor(y, dtype=torch.float32)
+    
+    def __len__(self):
+        return len(self.X)
+    
+    def __getitem__(self, idx):
+        return self.X[idx], self.y[idx]
 
 class LSTMModel(nn.Module):
     def __init__(self, hidden_size=128, num_layers=2, dropout_rate=0.3):
@@ -439,30 +419,18 @@ def save_training_history(history, plot_path):
 
     print(f"Training history saved to {plot_path}")
 
-def save_predict_results(country_labels, predictions, predictions_csv_path):
-    file_exists = os.path.isfile(predictions_csv_path)
-    with open(predictions_csv_path, mode='a', newline='') as file:
+def save_predict_results(country_labels, values, csv_path, label="predicted_gdp"):
+    file_exists = os.path.isfile(csv_path)
+    with open(csv_path, mode='a', newline='') as file:
         writer = csv.writer(file)
-        # Write header if the file does not exist
         if not file_exists:
-            writer.writerow(["country", "predicted_gdp"])
+            writer.writerow(["country", label])
 
-        for country, pred in zip(country_labels, predictions):
-            writer.writerow([country, pred])
-
+        for country, val in zip(country_labels, values):
+            formatted_val = "[" + ", ".join(f"{v:.2f}" for v in val) + "]"
+            writer.writerow([country, formatted_val])
 
 def plot_gdp_predictions_multi(actuals, lstm_preds, cnn_lstm_preds, transformer_preds, country_labels, selected_countries=None, save_dir=time_models_dir):
-    """
-    Plots predicted vs actual GDP for multiple countries across different models.
-    
-    Params:
-        actuals (numpy array): Actual GDP values
-        lstm_preds (numpy array): LSTM model predictions
-        cnn_lstm_preds (numpy array): CNN-LSTM model predictions
-        transformer_preds (numpy array): Transformer model predictions
-        country_labels (list): Country names corresponding to each sequence
-        selected_countries (list): List of countries to plot
-    """  
     for selected_country in selected_countries:
         # Get indices for the selected country
         country_indices = [i for i, country in enumerate(country_labels) if country == selected_country]
@@ -514,8 +482,8 @@ for name in models:
     # for dropout, lr, batch_size, epochs in param_grid:
         set_seed(seed)
         print(f"Training {name} with Dropout={dropout}, LR={lr}, Batch={batch_size}, Epochs={epochs}")
-        train_loader = DataLoader(GDPDataset(X_train, y_train), batch_size=batch_size, shuffle=True)
-        val_loader = DataLoader(GDPDataset(X_val, y_val), batch_size=batch_size)
+        train_loader = DataLoader(GDPDataset(X_train_scale, y_train), batch_size=batch_size, shuffle=True)
+        val_loader = DataLoader(GDPDataset(X_val_scale, y_val), batch_size=batch_size)
 
         model = model_class(dropout_rate=dropout)
         
@@ -564,38 +532,16 @@ for name in models:
     save_training_history(history, plot_path=f"{output_dir}/{name}_best_model_training_graph")
     final_model_path=os.path.join(time_models_dir, f"{name}.pth")
 
-    if final_trainer==True:
-        
-        print(f"Training Final {name} with Dropout={best_params['dropout']}, LR={best_params['lr']}, Batch={best_params['batch_size']}, Epochs={best_params['epochs']}")
-
-        X_final_train = np.concatenate([X_train, X_val], axis=0)
-        y_final_train = np.concatenate([y_train, y_val], axis=0)
-        final_train_loader = DataLoader(GDPDataset(X_final_train, y_final_train), batch_size=best_params['batch_size'], shuffle=False)
-        
-        model=model_class(dropout_rate=best_params["dropout"])
-        train_losses, val_losses, val_loss, model_path = train_model(
-                model, train_loader=final_train_loader, val_loader=None,
-                lr=best_params["lr"], epochs=final_train_epochs, model_path=final_model_path
-        )
-
-        torch.save(model.state_dict(), model_path, _use_new_zipfile_serialization=False)
-
-        history={
-            'batch_size': best_params['batch_size'], 'epochs': final_train_epochs, 'lr': best_params["lr"], 
-            'train_losses': train_losses, 'val_losses': val_losses,
-        }
-        save_training_history(history, plot_path=f"{time_models_dir}/{name}_final_model_training_graph")
-
     model=model_class(dropout_rate=best_params["dropout"])
     model.load_state_dict(torch.load(model_path))
 
     torch.save(model.state_dict(), final_model_path, _use_new_zipfile_serialization=False)
 
-    test_loader = DataLoader(GDPDataset(X_test, y_test), batch_size=best_params['batch_size'] ,shuffle=False)
+    test_loader = DataLoader(GDPDataset(X_test_scale, y_test), batch_size=best_params['batch_size'] ,shuffle=False)
     actuals, predictions, country_labels, results = evaluate_model(model, test_loader, test_country_labels)
     
     predictions_csv_path = os.path.join(output_dir, f"{name}_test_predictions.csv")
-    save_predict_results(country_labels, predictions, predictions_csv_path)
+    save_predict_results(country_labels, predictions, predictions_csv_path, label="predicted_gdp")
 
     if name == "LSTM":
         lstm_preds = predictions
@@ -619,9 +565,10 @@ for name in models:
         writer.writerow(results)
 
 actuals_csv_path = os.path.join(output_dir, f"test_actuals.csv")
-save_predict_results(country_labels, actuals, actuals_csv_path)
+save_predict_results(country_labels, actuals, actuals_csv_path, label="actual_gdp")
 
 selected_countries = ["United States", "China", "Russian Federation", "Brazil", "Switzerland", "Denmark"] 
 plot_gdp_predictions_multi(actuals, lstm_preds, cnn_lstm_preds, transformer_preds, country_labels, selected_countries, output_dir)
-predictions_path = os.path.join(output_dir, "model_predictions.csv")
-    
+
+task4_result_df = pd.read_csv(result_path)
+print(task4_result_df.tail(3))

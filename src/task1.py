@@ -124,7 +124,6 @@ def impute_missing_values(matrix):
 
     return matrix
 
-
 processed_df_list = []
 for country in tqdm(df['country'].unique(), desc="Processing Countries", unit="country"):
     # print(f"Processing {country}...")
@@ -237,6 +236,7 @@ normalised_imputed_df=normalize_and_plot(imputed_df, filter_countries=False, sav
 normalised_imputed_df.to_csv('data/normalised_imputed_world_bank_data_dev.csv', index=False)
 
 normalised_df=pd.read_csv('data/normalised_imputed_world_bank_data_dev.csv')
+
 import pandas as pd
 import numpy as np
 

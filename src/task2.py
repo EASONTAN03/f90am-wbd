@@ -19,6 +19,12 @@ df=pd.read_csv('data/task2_world_bank_data_dev.csv')
 
 seed=11
 
+batch_sizes = [16, 32]
+epochs_list = [30,50]
+learning_rates = [0.001, 0.01, 0.1]
+dropout_options = [0]
+latent_list = [4, 5, 6]
+
 def set_seed(seed=42):
     np.random.seed(seed)
     torch.manual_seed(seed)
@@ -28,13 +34,7 @@ def set_seed(seed=42):
 
 set_seed(seed)
 
-batch_sizes = [32]
-epochs_list = [30, 50, 70]
-learning_rates = [0.001, 0.01, 0.1]
-dropout_rate = [0,0.1,0.2,0.3,0.4]
-latent_list = [4, 5, 6]
-
-grid_params = {'batch_sizes': batch_sizes, 'epochs_list': epochs_list, 'learning_rates': learning_rates, "dropout_rate": dropout_rate, "latent_list": latent_list}
+grid_params = {'batch_sizes': batch_sizes, 'epochs_list': epochs_list, 'learning_rates': learning_rates, "dropout_rate": dropout_options, "latent_list": latent_list}
 
 # Check for CUDA
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -280,7 +280,7 @@ final_performance=None
 
 cluster_model_path = os.path.join(timestamp_dir,f"clusters_{timestamp}.pkl") 
 
-for batch_size, num_epochs, lr, latent_dim, dropout in product(batch_sizes, epochs_list, learning_rates, latent_list, dropout_rate):
+for batch_size, num_epochs, lr, latent_dim, dropout in grid_params:
     print(f"Training with batch_size={batch_size}, epochs={num_epochs}, learning_rate={lr}, 'latent_dim={latent_dim}")
     set_seed(seed)
     train_losses, trained_autoencoder = train_autoencoder(data, batch_size, num_epochs, lr, latent_dim, dropout)
@@ -310,7 +310,7 @@ for batch_size, num_epochs, lr, latent_dim, dropout in product(batch_sizes, epoc
         final_performance=performance_results
         final_latent_data=latent_data
         best_silhouette = performance_results['Silhouette Score'][0]
-        best_params = {'batch_size': batch_size, 'epochs': num_epochs, 'learning_rate': lr, "dropout_rate": dropout, "latent_dim": latent_dim}
+        best_params = {'batch_size': batch_size, 'epochs': num_epochs, 'learning_rate': lr, "dropout_options": dropout, "latent_dim": latent_dim}
         best_model = trained_autoencoder
         history={
             'batch_size': batch_size, 'epochs': num_epochs, 'lr': lr, 'train_losses': train_losses

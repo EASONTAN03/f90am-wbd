@@ -12,56 +12,45 @@ from sklearn.metrics import confusion_matrix, classification_report, f1_score
 from itertools import product
 import time
 import csv
+import json
 import seaborn as sns
 
 imputed_df=pd.read_csv('data/final_impute_world_bank_data_dev.csv')
 
-torch.manual_seed(11)
-np.random.seed(11)
+seed=11
 
-# Ensure GPU usage
+batch_sizes=[16, 32]
+epochs_list=[50, 100, 150]
+learning_rates=[0.0001] 
+scoring_metric="loss" #"f1" "loss" "accuracy"
+
+k_folds=5
+
+def set_seed(seed=42):
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+set_seed(seed)
+
+timestamp = int(time.time())
+result_dir = "results/task3"
+os.makedirs(result_dir, exist_ok=True)
+models_dir = os.path.join(result_dir, "models")
+os.makedirs(models_dir, exist_ok=True)
+time_models_dir = os.path.join(models_dir, str(timestamp))
+os.makedirs(time_models_dir, exist_ok=True)
+output_dir = os.path.join(time_models_dir, "outputs")
+os.makedirs(output_dir, exist_ok=True)
+params_tune_dir=os.path.join(time_models_dir,"params_tune")
+os.makedirs(params_tune_dir, exist_ok=True)
+graphs_dir=os.path.join(time_models_dir,"outputs")
+os.makedirs(graphs_dir, exist_ok=True)
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}")
-
-# Early Stopping Class
-class EarlyStopping():
-    def __init__(self, patience=5, min_delta=0):
-        self.patience = patience
-        self.min_delta = min_delta
-        self.best_loss = None
-        self.counter = 0
-        self.early_stop = False
-
-    def __call__(self, val_loss):
-        if self.best_loss is None:
-            self.best_loss = val_loss
-        elif val_loss < self.best_loss - self.min_delta:
-            self.best_loss = val_loss
-            self.counter = 0
-        else:
-            self.counter += 1
-            if self.counter >= self.patience:
-                self.early_stop = True
-
-# Define model class
-class GDPClassifier(nn.Module):
-    def __init__(self, input_size):
-        super(GDPClassifier, self).__init__()
-        self.fc1 = nn.Linear(input_size, 128)
-        self.bn1 = nn.BatchNorm1d(128, eps=1e-5, momentum=0.1, affine=True, track_running_stats=True)
-        self.fc2 = nn.Linear(128, 64)
-        self.bn2 = nn.BatchNorm1d(64, eps=1e-5, momentum=0.1, affine=True, track_running_stats=True)
-        self.fc3 = nn.Linear(64, 4)
-        self.dropout = nn.Dropout(0.4)
-        self.relu = nn.ReLU()
-    
-    def forward(self, x):
-        x = self.relu(self.bn1(self.fc1(x)))
-        x = self.dropout(x)
-        x = self.relu(self.bn2(self.fc2(x)))
-        x = self.dropout(x)
-        x = self.fc3(x)
-        return x
 
 # Load and preprocess data
 def load_and_preprocess_data(df):
@@ -94,23 +83,71 @@ def load_and_preprocess_data(df):
 
     return X, y, le, class_weights
 
-def compute_f1(y_true, y_pred):
-    return f1_score(y_true.cpu().numpy(), y_pred.cpu().numpy(), average="weighted")  # Weighted F1-score
+class EarlyStopping():
+    def __init__(self, patience=5, min_delta=0, verbose=True, path="best_model.pth"):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.verbose = verbose
+        self.path = path  # File path to save best model
+        self.best_loss = float("inf")
+        self.counter = 0
+        self.early_stop = False
+        self.best_model_state = None
 
-def train_model(input_shape, train_loader, val_loader, batch_size, num_epochs, lr, class_weights):
-    # Split dataset (train 70%, validation 15%, test 15%)
-    print(f"Training with batch_size={batch_size}, epochs={num_epochs}, learning_rate={lr}")
+    def __call__(self, val_loss, model):
+        if val_loss < self.best_loss - self.min_delta:  # Check for improvement
+            self.best_loss = val_loss
+            self.counter = 0  # Reset counter
+
+            # Save the best model state (both to disk and memory)
+            self.best_model_state = model.state_dict()
+            torch.save(model.state_dict(), self.path, _use_new_zipfile_serialization=False)
+
+            if self.verbose:
+                print(f"Validation loss improved! Model saved to {self.path}")
+
+        else:
+            self.counter += 1
+            if self.verbose:
+                print(f"EarlyStopping counter: {self.counter}/{self.patience} (No improvement)")
+
+            if self.counter >= self.patience:  # Stop if patience exceeded
+                self.early_stop = True
+                if self.verbose:
+                    print(f"Early stopping triggered after {self.patience}")
+
+class GDPClassifier(nn.Module):
+    def __init__(self, input_size):
+        super(GDPClassifier, self).__init__()
+        self.fc1 = nn.Linear(input_size, 128)
+        self.bn1 = nn.BatchNorm1d(128, eps=1e-5, momentum=0.1, affine=True, track_running_stats=True)
+        self.fc2 = nn.Linear(128, 64)
+        self.bn2 = nn.BatchNorm1d(64, eps=1e-5, momentum=0.1, affine=True, track_running_stats=True)
+        self.fc3 = nn.Linear(64, 4)
+        self.dropout = nn.Dropout(0.4)
+        self.relu = nn.ReLU()
     
+    def forward(self, x):
+        x = self.relu(self.bn1(self.fc1(x)))
+        x = self.dropout(x)
+        x = self.relu(self.bn2(self.fc2(x)))
+        x = self.dropout(x)
+        x = self.fc3(x)
+        return x
+
+# Training function with early stopping
+def train_model(input_shape, train_loader, val_loader, epochs, lr, class_weights, model_path=None):
     model = GDPClassifier(input_size=input_shape).to(device)
     criterion = nn.CrossEntropyLoss(weight=class_weights)
     optimizer = optim.Adam(model.parameters(), lr=lr)
     
-    early_stopping = EarlyStopping(patience=10, min_delta=0.001)
+    early_stopping = EarlyStopping(patience=10, min_delta=0.001, path=model_path)
     
+    val_f1s = []
     train_losses, val_losses = [], []
     train_accuracies, val_accuracies = [], []
 
-    for epoch in range(num_epochs):
+    for epoch in range(epochs):
         model.train()
         train_loss = 0.0
         correct_train, total_train = 0, 0
@@ -133,179 +170,55 @@ def train_model(input_shape, train_loader, val_loader, batch_size, num_epochs, l
         train_losses.append(train_loss)  # Store training loss
         train_accuracies.append(train_accuracy)  # Store training accuracy
 
-        # Validation evaluation
-        correct_val, total_val = 0, 0
-        running_loss, val_loss = 0, 0
-        model.eval()
-        with torch.no_grad():
-            for inputs, labels in val_loader:
-                outputs = model(inputs)
-                loss = criterion(outputs, labels)
-                val_loss += loss.item()
-
-                _, predicted = torch.max(outputs, 1)
-                total_val += labels.size(0)
-                correct_val += (predicted == labels).sum().item()
-
-        val_loss /= len(val_loader)
-        val_accuracy = correct_val / total_val
-
-        val_losses.append(val_loss)  # Store validation loss
-        val_accuracies.append(val_accuracy)  # Store validation accuracy
-
-        print(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Train Acc: {train_accuracy:.4f}, Val Acc: {val_accuracy:.4f}")
-
-        early_stopping(val_loss)
-        if early_stopping.early_stop:
-            print("Early stopping")
-            break
-    
-    # Store training history for plotting
-    history={
-        'batch_size': batch_size, 'epochs': num_epochs, 'lr': lr, 
-        'train_losses': train_losses, 'test_losses': val_losses,
-        'train_accuracies': train_accuracies, 'test_accuracies': val_accuracies
-    }
-
-    return model, history  # Return history for plotting
-
-def train_model_cv(X, y, batch_sizes, epochs_list, learning_rates, class_weights, k_folds=5):
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-    best_f1 = -1
-    best_params = None
-    history = {}  # Store loss and accuracy per epoch
-
-    train_X, test_X, train_y, test_y = train_test_split(
-        X, y, test_size=0.2, random_state=11, shuffle=True, stratify=y
-    )
-
-    scaler = StandardScaler()
-    train_X = scaler.fit_transform(train_X)  # Fit on training data
-    test_X = scaler.transform(test_X)  # Transform validation data using the same scaler
-
-    kfold = KFold(n_splits=k_folds, shuffle=True, random_state=11)
-
-    for batch_size, num_epochs, lr in product(batch_sizes, epochs_list, learning_rates):
-        print(f"Training with batch_size={batch_size}, epochs={num_epochs}, learning_rate={lr}")
-
-        fold_f1s = []
-
-        for fold, (train_idx, val_idx) in enumerate(kfold.split(train_X)):
-            print(f"Fold {fold+1}/{k_folds}")
-
-            X_train, X_val = train_X[train_idx], train_X[val_idx]
-            y_train, y_val = train_y[train_idx], train_y[val_idx]
-
-            # Create train and validation datasets
-            train_X_tensor = torch.tensor(X_train, dtype=torch.float32, device=device)
-            val_X_tensor = torch.tensor(X_val, dtype=torch.float32, device=device)
-            train_y_tensor = torch.tensor(y_train, dtype=torch.long, device=device)
-            val_y_tensor = torch.tensor(y_val, dtype=torch.long, device=device)
-            
-            train_dataset = TensorDataset(train_X_tensor, train_y_tensor)
-            val_dataset = TensorDataset(val_X_tensor, val_y_tensor)
-
-            train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
-            val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
-
-            # Initialize model
-            model = GDPClassifier(input_size=train_X_tensor.shape[1]).to(device)
-            criterion = nn.CrossEntropyLoss(weight=class_weights)
-            optimizer = optim.Adam(model.parameters(), lr=lr)
-
-            # Early stopping mechanism
-            early_stopping = EarlyStopping(patience=10, min_delta=0.001)
-
-            val_f1s = []  # Track F1-score for each epoch
-
-            for epoch in range(num_epochs):
-                model.train()
-                running_loss, correct_train, total_train = 0.0, 0, 0
-
-                for inputs, labels in train_loader:
+        if val_loader is not None:
+            # Validation evaluation
+            model.eval()
+            val_loss = 0
+            correct_val, total_val = 0, 0
+            all_preds, all_labels = [], []
+            with torch.no_grad():
+                for inputs, labels in val_loader:
                     inputs, labels = inputs.to(device), labels.to(device)
-                    optimizer.zero_grad()
                     outputs = model(inputs)
                     loss = criterion(outputs, labels)
-                    loss.backward()
-                    optimizer.step()
-                    running_loss += loss.item()
+                    val_loss += loss.item()
 
                     _, predicted = torch.max(outputs, 1)
-                    total_train += labels.size(0)
-                    correct_train += (predicted == labels).sum().item()
+                    all_preds.append(predicted)
+                    all_labels.append(labels)
+                    total_val += labels.size(0)
+                    correct_val += (predicted == labels).sum().item()
 
-                train_loss = running_loss / len(train_loader)
-                train_accuracy = correct_train / total_train
+            val_loss /= len(val_loader)
+            val_accuracy = correct_val / total_val
 
-                # Validation step
-                model.eval()
-                val_loss, correct_val, total_val = 0, 0, 0
-                all_preds, all_labels = [], []
-                
-                with torch.no_grad():
-                    for inputs, labels in val_loader:
-                        inputs, labels = inputs.to(device), labels.to(device)
-                        outputs = model(inputs)
-                        loss = criterion(outputs, labels)
-                        val_loss += loss.item()
+            all_val_preds = torch.cat(all_preds)
+            all_val_labels = torch.cat(all_labels)
+            val_f1 = f1_score(all_val_labels.cpu().numpy(), all_val_preds.cpu().numpy(), average="weighted")
+            val_f1s.append(val_f1)
 
-                        _, predicted = torch.max(outputs, 1)
-                        all_preds.append(predicted)
-                        all_labels.append(labels)
-                        total_val += labels.size(0)
-                        correct_val += (predicted == labels).sum().item()
+            val_losses.append(val_loss)  # Store validation loss
+            val_accuracies.append(val_accuracy)  # Store validation accuracy
 
-                val_loss /= len(val_loader)
-                val_accuracy = correct_val / total_val
+            print(f"Epoch {epoch+1}/{epochs} | Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Train Acc: {train_accuracy:.4f}, Val Acc: {val_accuracy:.4f}")
 
-                all_val_preds = torch.cat(all_preds)
-                all_val_labels = torch.cat(all_labels)
-                val_f1 = compute_f1(all_val_labels, all_val_preds)
-                val_f1s.append(val_f1)
+            early_stopping(val_loss, model)
 
-                print(f"Epoch {epoch+1}/{num_epochs} - Train Loss: {train_loss:.4f}, Val Loss: {val_loss:.4f}, Train Acc: {train_accuracy:.4f}, Val Acc: {val_accuracy:.4f}")
-
-                early_stopping(val_loss)
-                if early_stopping.early_stop:
-                    print("Early stopping triggered")
-                    break
-
-            # Store fold history
-            fold_f1s.append(max(val_f1s))  # Store last validation accuracy for this fold
-
-        # Compute average accuracy across folds
-        avg_f1 = sum(fold_f1s) / k_folds
-
-        # Update best model if the current one is better
-        if avg_f1 > best_f1:
-            best_f1 = avg_f1
-            best_params = {'batch_size': batch_size, 'epochs': num_epochs, 'learning_rate': lr}
-    
-    #train best model
-    train_X_tensor = torch.tensor(train_X, dtype=torch.float32, device=device)
-    test_X_tensor = torch.tensor(test_X, dtype=torch.float32, device=device)
-    train_y_tensor = torch.tensor(train_y, dtype=torch.long, device=device)
-    test_y_tensor = torch.tensor(test_y, dtype=torch.long, device=device)
-    
-
-    train_dataset = TensorDataset(train_X_tensor, train_y_tensor)
-    train_loader = DataLoader(train_dataset, batch_size=best_params['batch_size'], shuffle=True)
-    test_dataset = TensorDataset(test_X_tensor, test_y_tensor)
-    test_loader= DataLoader(test_dataset, batch_size=best_params['batch_size'], shuffle=True)
-
-    model, history = train_model(input_shape=train_X_tensor.shape[1], train_loader=train_loader, val_loader=test_loader, batch_size=best_params['batch_size'], num_epochs=best_params['epochs'], lr=best_params['learning_rate'], class_weights=class_weights)
-    cm, results=evaluate(model, test_dataset, best_params['batch_size'], le)
-
-    return model, str(best_params), history, results, cm  # Return history for plotting
-
-def evaluate(model, test_dataset, batch_size, le):
-    
+            if early_stopping.early_stop:
+                print("Early stopping triggered. Restoring best model weights...")
+                model.load_state_dict(early_stopping.best_model_state)  # Restore Best Model
+                break
+            else:
+                print(f"Epoch {epoch+1}/{epochs} | Train Loss: {train_loss:.4f}")
+    if val_loader is not None:
+        return train_losses, train_accuracies, val_losses, val_accuracies, val_f1s, early_stopping.best_loss, early_stopping.path
+    else:
+        return train_losses, train_accuracies, None, None, None, None, model_path
+def evaluate_model(model, test_loader, le):
+    model.to(device)
     model.eval()
     y_true, y_pred = [], []
     all_outputs = []    
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False)
 
     with torch.no_grad():
         for inputs, labels in test_loader:
@@ -342,16 +255,12 @@ def evaluate(model, test_dataset, batch_size, le):
     f1_score = np.nanmean(f1_score)  # Mean F1-score across classes
 
     return cm, [tp.tolist(), fp.tolist(), tn.tolist(), fn.tolist(), accuracy, precision, recall, f1_score]
+def save_training_history(history, plot_path):
+    plot_path = os.path.join(plot_path, f"training_history.png")
 
-def save_training_history(history, file_path, output_dir, test_accuracy=None):
-    output_dir = f"{output_dir}/training_graphs"
-    os.makedirs(output_dir, exist_ok=True)
-    
     epochs = range(1, len(history["train_losses"]) + 1)
     
     plt.figure(figsize=(12, 5))
-    
-    # Loss Plot
     plt.subplot(1, 2, 1)
     plt.plot(epochs, history["train_losses"], label='Train Loss')
     plt.plot(epochs, history["test_losses"], label='Validation Loss')
@@ -362,15 +271,12 @@ def save_training_history(history, file_path, output_dir, test_accuracy=None):
     plt.annotate(f"{history['train_losses'][-1]:.2f}", xy=(epochs[-1], history["train_losses"][-1]),
                  xytext=(epochs[-1] - 5, history["train_losses"][-1] + 0.05),
                  arrowprops=dict(arrowstyle="->", color="blue"), fontsize=10, color="blue")
-    
     plt.annotate(f"{history['test_losses'][-1]:.2f}", xy=(epochs[-1], history["test_losses"][-1]),
                  xytext=(epochs[-1] - 5, history["test_losses"][-1] + 0.05),
                  arrowprops=dict(arrowstyle="->", color="orange"), fontsize=10, color="orange")
-    # Accuracy Plot
     plt.subplot(1, 2, 2)
     plt.plot(epochs, history["train_accuracies"], label='Train Accuracy')
     plt.plot(epochs, history["test_accuracies"], label='Validation Accuracy')
-
     plt.title('Training and Validation Accuracy')
     plt.xlabel('Epochs')
     plt.ylabel('Accuracy')
@@ -378,52 +284,141 @@ def save_training_history(history, file_path, output_dir, test_accuracy=None):
     plt.annotate(f"{history['train_accuracies'][-1]:.2f}", xy=(epochs[-1], history["train_accuracies"][-1]),
                  xytext=(epochs[-1] - 5, history["train_accuracies"][-1] + 0.02),
                  arrowprops=dict(arrowstyle="->", color="blue"), fontsize=10, color="blue")
-
     plt.annotate(f"{history['test_accuracies'][-1]:.2f}", xy=(epochs[-1], history["test_accuracies"][-1]),
                  xytext=(epochs[-1] - 5, history["test_accuracies"][-1] + 0.02),
                  arrowprops=dict(arrowstyle="->", color="orange"), fontsize=10, color="orange")
-    plot_path = os.path.join(output_dir, f"{file_path}_training_history.png")
     plt.savefig(plot_path, bbox_inches='tight')
-    plt.close()
+    plt.show()
     
     print(f"Training history saved to {plot_path}")
-
+    
 def save_cm_figure(cm, plot_path):
+    plot_path = os.path.join(plot_path, f"confusion_matrix.png")
+
     plt.figure(figsize=(6,6))
     sns.heatmap(cm, annot=True, fmt='d', cmap="Blues", xticklabels=le.classes_, yticklabels=le.classes_)
     plt.xlabel("Predicted")
     plt.ylabel("True")
     plt.title("Confusion Matrix")
-    plt.savefig("results/task3/confusion_matrix.png")
-    plt.close()
+    plt.savefig(plot_path)
+    plt.show()
     print(f"Confusion matrix saved to {plot_path}")
-
-
-# Set seed for reproducibility
-torch.manual_seed(11)
-np.random.seed(11)
-
-timestamp = int(time.time())
-result_dir = "results/task3"
-os.makedirs(result_dir, exist_ok=True)
 
 df_task3 = imputed_df.copy()
 X, y, le, class_weights = load_and_preprocess_data(df_task3)
 
-params = {
-    'batch_sizes': [16, 32, 64],  
-    'epochs_list': [70],  
-    'learning_rates': [0.001, 0.01, 0.1] 
-}
+# K-Fold CV Training
+train_X, test_X, train_y, test_y = train_test_split(
+    X, y, test_size=0.2, random_state=seed, shuffle=True, stratify=y
+)
 
-model, params, history, results, cm = train_model_cv(X, y, params['batch_sizes'], params['epochs_list'], params['learning_rates'], class_weights)
-save_training_history(history, file_path=str(timestamp), output_dir=result_dir, test_accuracy=results[4])
-save_cm_figure(cm, plot_path=f"{result_dir}/confusion_matrix_{timestamp}.png")
+scaler = StandardScaler()
+train_X = scaler.fit_transform(train_X)  # Fit on training data
+test_X = scaler.transform(test_X)  # Transform validation data using the same scaler
 
-model_dir=f"{result_dir}/models"
-os.makedirs(model_dir, exist_ok=True)
-model_path = f"{model_dir}/{timestamp}.pth"
-torch.save(model.state_dict(), model_path)
+kfold = KFold(n_splits=k_folds, shuffle=True, random_state=seed)
+
+best_model_info = {"accuracy": -1, "loss": float("inf"), "f1": -1, "params": {}, "grid_search_params":{}, "path": None}
+param_grid = product(batch_sizes, epochs_list, learning_rates)
+
+for batch_size, epochs, lr in param_grid:
+    set_seed(seed)
+    print(f"Training in {kfold} Fold CV with LR={lr}, Batch={batch_size}, Epochs={epochs}")
+
+    model_path = f"best_model_lr{int(lr*10000)}_bs{batch_size}_ep{epochs}.pth"
+    tune_model_path=os.path.join(params_tune_dir, model_path)
+
+    fold_accuracies = []
+    fold_losses = []
+    fold_f1s = []
+
+    for fold, (train_idx, val_idx) in enumerate(kfold.split(train_X)):
+        print(f"Fold {fold+1}/{k_folds}")
+
+        X_train, X_val = train_X[train_idx], train_X[val_idx]
+        y_train, y_val = train_y[train_idx], train_y[val_idx]
+
+        # Create train and validation datasets
+        train_X_tensor = torch.tensor(X_train, dtype=torch.float32, device=device)
+        val_X_tensor = torch.tensor(X_val, dtype=torch.float32, device=device)
+        train_y_tensor = torch.tensor(y_train, dtype=torch.long, device=device)
+        val_y_tensor = torch.tensor(y_val, dtype=torch.long, device=device)
+        
+        train_dataset = TensorDataset(train_X_tensor, train_y_tensor)
+        val_dataset = TensorDataset(val_X_tensor, val_y_tensor)
+
+        train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False)
+
+        # Initialize model
+        train_losses, train_accuracies, val_losses, val_accuracies, val_f1s, val_loss, saved_path=train_model(train_X_tensor.shape[1], train_loader, val_loader, epochs, lr, class_weights, model_path=tune_model_path)
+
+        # Store fold history
+        fold_accuracies.append(max(val_accuracies))  
+        fold_losses.append(val_loss)
+        fold_f1s.append(max(val_f1s))  # Store last validation accuracy for this fold
+
+    # Compute average accuracy across folds
+    avg_f1 = sum(fold_f1s) / k_folds
+    avg_acc = sum(fold_accuracies) / k_folds
+    avg_loss =sum(fold_losses) / k_folds
+
+    # Update best model if the current one is better
+    if (scoring_metric == "accuracy" and avg_acc > best_model_info["accuracy"]) or \
+            (scoring_metric == "loss" and avg_loss < best_model_info["loss"]) or \
+                (scoring_metric == "f1" and avg_f1 > best_model_info["f1"]):
+        best_model_info = {
+            "accuracy": avg_acc,
+            "loss": avg_loss,
+            "f1": avg_f1,
+            "params": {
+                "lr": lr,
+                "batch_size": batch_size,
+                "epochs": epochs
+            },
+            "grid_search_params": {
+                "learning_rates": learning_rates,
+                "batch_sizes": batch_sizes,
+                "epochs_list": epochs_list
+            },
+            "path": saved_path
+        }
+
+best_model_info_path=f"{time_models_dir}/best_model_info.json"
+with open(best_model_info_path, "w") as json_file:
+    json.dump(best_model_info, json_file, indent=4)
+
+with open(best_model_info_path, "r") as file:
+    config=json.load(file)
+
+best_params=config["params"]
+
+final_model_path=os.path.join(time_models_dir, f"gdp_classifier.pth")
+
+#train best model
+train_X_tensor = torch.tensor(train_X, dtype=torch.float32, device=device)
+test_X_tensor = torch.tensor(test_X, dtype=torch.float32, device=device)
+train_y_tensor = torch.tensor(train_y, dtype=torch.long, device=device)
+test_y_tensor = torch.tensor(test_y, dtype=torch.long, device=device)
+
+train_dataset = TensorDataset(train_X_tensor, train_y_tensor)
+train_loader = DataLoader(train_dataset, batch_size=best_params['batch_size'], shuffle=True)
+test_dataset = TensorDataset(test_X_tensor, test_y_tensor)
+test_loader= DataLoader(test_dataset, batch_size=best_params['batch_size'], shuffle=True)
+
+train_losses, train_accuracies, test_losses, test_accuracies, test_f1s, test_loss, model_path=train_model(train_X_tensor.shape[1], train_loader, test_loader, best_params['epochs'], best_params['lr'], class_weights, model_path=final_model_path)
+history={
+        'batch_size': batch_size, 'epochs': epochs, 'lr': lr, 
+        'train_losses': train_losses, 'test_losses': test_losses,
+        'train_accuracies': train_accuracies, 'test_accuracies': test_accuracies,
+    }
+
+model = GDPClassifier(input_size=test_X_tensor.shape[1])
+model.load_state_dict(torch.load(model_path))
+cm, results=evaluate_model(model, test_loader, le)
+
+save_training_history(history, plot_path=output_dir)
+save_cm_figure(cm, plot_path=output_dir)
 
 # Save results
 os.makedirs(result_dir, exist_ok=True)
@@ -431,9 +426,8 @@ result_path = f"{result_dir}/results.csv"
 file_exists = os.path.isfile(result_path)
 header = ["model_path", "params", "tp", "fp", "tn", "fn", "accuracy", "precision", "recall", "f1-score"]
 
-results=[model_path, params] + results
+results=[model_path, best_params] + results
 
-print(results)
 with open(result_path, mode='a', newline='') as file:
     writer = csv.writer(file)
     # Write header if the file does not exist
@@ -442,3 +436,5 @@ with open(result_path, mode='a', newline='') as file:
     # Write the statistics
     writer.writerow(results)
 
+task3_result_df = pd.read_csv(result_path)
+print(task3_result_df.tail(1))
